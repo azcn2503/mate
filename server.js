@@ -11,42 +11,130 @@ var campaign = {
 };
 
 var availableActions = {
-	'BODY': ['getText'],
-	'H1': ['getText']
-};
-
-var commands = {
-	'open': function(url, callback) {
-		//console.log('Opening ' + url);
-		casper.thenOpen(url, function() {
-			if(callback) { callback({'obj': this, 'text': this.getTitle()}); }
-		});
-		return true;
+	'A': {
+		'actions': ['getText'],
+		'href': {
+			'actions': ['click']
+		}
 	},
-	'select': function(selector, callback) {
-		casper.then( function() {
-			var eval = this.evaluate( function(selector) {
-				return Array.prototype.map.call(document.querySelectorAll(selector), function(el) {
-					return {'text': el.innerText, 'type': el.nodeName};
-				});
-			}, {selector: selector});
-			var actions = [];
-			var text = '';
-			for(var i in eval) {
-				if(availableActions.hasOwnProperty(eval[i].type)) {
-					actions = availableActions[eval[i].type];
-				}
-				text += eval[i].text + '\n';
+	'BODY': {
+		'actions': ['getText']
+	},
+	'DIV': {
+		'actions': ['getText']
+	},
+	'H1': {
+		'actions': ['getText'],
+		'class': {
+			'assistive-text section-heading': {
+				'actions': ['test']
 			}
-			if(callback) { callback({'obj': eval, 'text': text, 'actions': actions}); }
-			return eval;
-		});
-		return true;
+		}
+	},
+	'INPUT': {
+		'type': {
+			'text': {
+				'actions': ['sendKeys', 'getValue']
+			},
+			'button': {
+				'actions': ['click', 'getValue']
+			}
+		}
 	}
 };
 
+var addActions = function(target, source) {
+	for(var i in source) {
+		target.push(source[i]);
+	}
+	return target;
+}; 
+
+var processActions = function(el) {
+	if(!el) { return false; }
+	var actions = [];
+	var nodeName = el.nodeName;
+	if(availableActions[nodeName] && availableActions[nodeName].actions) {
+		actions = addActions(actions, availableActions[nodeName].actions);
+	}
+	var attributes = el.attributes;
+	for(var i in attributes) {
+		if(availableActions[nodeName] && availableActions[nodeName][i] && availableActions[nodeName][i].actions) {
+			actions = addActions(actions, availableActions[nodeName][i].actions);
+		}
+		if(availableActions[nodeName] && availableActions[nodeName][i] && availableActions[nodeName][i][attributes[i]] && availableActions[nodeName][i][attributes[i]].actions) {
+			actions = addActions(actions, availableActions[nodeName][i][attributes[i]].actions);
+		}
+	}
+	return actions;
+};
+
+var commands = {
+
+	'click': function(selector, callback) {
+		casper.then( function() {
+			this.click(selector);
+			if(callback) { callback({'url': this.getCurrentUrl()}); }
+		});
+	},
+
+	'open': function(url, callback) {
+		casper.thenOpen(url, function() {
+			if(callback) { callback({'url': this.getCurrentUrl()}); }
+		});
+		return true;
+	},
+
+	'select': function(selector, callback) {
+		casper.then( function() {
+
+			var el = this.evaluate( function(selector) {
+				var el = document.querySelector(selector);
+				var attributes = {};
+				for(var i in el.attributes) {
+					if(el.attributes[i].nodeType != 2) { continue; }
+					attributes[el.attributes[i].nodeName] = el.attributes[i].value;
+				}
+				return {'innerText': el.innerText, 'attributes': attributes, 'nodeName': el.nodeName};
+			}, {selector: selector});
+
+			if(!el) { return false; }
+			el.actions = processActions(el);
+
+			if(callback) { callback(el); }
+
+		});
+	},
+
+	'selectAll': function(selector, callback) {
+		casper.then( function() {
+
+			var els = this.evaluate( function(selector) {
+				return Array.prototype.map.call(document.querySelectorAll(selector), function(el) {
+					var attributes = {};
+					for(var i in el.attributes) {
+						if(el.attributes[i].nodeType != 2) { continue; }
+						attributes[el.attributes[i].nodeName] = el.attributes[i].value;
+					}
+					return {'innerText': el.innerText, 'attributes': attributes, 'nodeName': el.nodeName};
+				});
+			}, {selector: selector});
+
+			if(!els) { return false; }
+			for(var i in els) {
+				if(!els[i]) { continue; }
+				els[i].actions = processActions(els[i]);
+			}
+
+			if(callback) { callback(els); }
+		});
+		return true;
+	}
+
+};
+
 function main() {
-	casper.wait(2000, function() {
+	casper.wait(500, function() {
 		var fileName = campaign['id'] + '.json';
 		var data = '';
 		if(fs.exists(fileName)) {
@@ -55,9 +143,8 @@ function main() {
 				if(!data[i].processed && data[i].command && data[i].data && commands[data[i].command]) {
 					data[i].waiting = true;
 					commands[data[i].command](data[i].data, function(res) {
-						console.log("Command processed: ", data[this].command, data[this].data);
-						console.log('Actions: ', JSON.stringify(res.actions));
-						console.log('---');
+						console.log('command: ', data[this].command, data[this].data);
+						console.log('result:  ', JSON.stringify(res));
 						commandProcessed = true;
 						data[this].processed = true;
 						data[this].waiting = false;
