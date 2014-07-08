@@ -10,11 +10,15 @@ var campaign = {
 	'limit': 100
 };
 
+var availableActions = {
+	'BODY': ['getText'],
+	'H1': ['getText']
+};
+
 var commands = {
-	'navigateToURL': function(url, callback) {
+	'open': function(url, callback) {
 		//console.log('Opening ' + url);
 		casper.thenOpen(url, function() {
-			//console.log('Page title: ' + this.getTitle());
 			if(callback) { callback({'obj': this, 'text': this.getTitle()}); }
 		});
 		return true;
@@ -23,14 +27,18 @@ var commands = {
 		casper.then( function() {
 			var eval = this.evaluate( function(selector) {
 				return Array.prototype.map.call(document.querySelectorAll(selector), function(el) {
-					return {'text': el.innerText};
+					return {'text': el.innerText, 'type': el.nodeName};
 				});
 			}, {selector: selector});
+			var actions = [];
 			var text = '';
 			for(var i in eval) {
+				if(availableActions.hasOwnProperty(eval[i].type)) {
+					actions = availableActions[eval[i].type];
+				}
 				text += eval[i].text + '\n';
 			}
-			if(callback) { callback({'obj': eval, 'text': text}); }
+			if(callback) { callback({'obj': eval, 'text': text, 'actions': actions}); }
 			return eval;
 		});
 		return true;
@@ -47,9 +55,8 @@ function main() {
 				if(!data[i].processed && data[i].command && data[i].data && commands[data[i].command]) {
 					data[i].waiting = true;
 					commands[data[i].command](data[i].data, function(res) {
-						console.log("Command processed: ", data[this].command);
-						console.log('Object: ', res.obj);
-						console.log('Text: ', res.text);
+						console.log("Command processed: ", data[this].command, data[this].data);
+						console.log('Actions: ', JSON.stringify(res.actions));
 						console.log('---');
 						commandProcessed = true;
 						data[this].processed = true;
