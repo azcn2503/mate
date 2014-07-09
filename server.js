@@ -96,7 +96,7 @@ var commands = {
 	},
 
 	'select': function(selector, callback) {
-		casper.waitForSelector(selector, function() {
+		casper.waitForSelector(selector, function then() {
 
 			var el = this.evaluate( function(selector) {
 				var el = document.querySelector(selector);
@@ -113,11 +113,15 @@ var commands = {
 
 			if(callback) { callback(el); }
 
+		}, function timeout() {
+
+			if(callback) { callback(null); }
+
 		});
 	},
 
 	'selectAll': function(selector, callback) {
-		casper.waitForSelector(selector, function() {
+		casper.waitForSelector(selector, function then() {
 
 			var els = this.evaluate( function(selector) {
 				return Array.prototype.map.call(document.querySelectorAll(selector), function(el) {
@@ -137,8 +141,12 @@ var commands = {
 			}
 
 			if(callback) { callback(els); }
+
+		}, function timeout() {
+
+			if(callback) { callback(null); }
+
 		});
-		return true;
 	},
 
 	'scrollPageToEnd': function(data, callback) {
