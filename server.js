@@ -82,9 +82,11 @@ var processActions = function(el) {
 var commands = {
 
 	'click': function(selector, callback) {
-		casper.then( function() {
+		casper.waitForSelector(selector, function then() {
 			this.click(selector);
-			if(callback) { callback({'url': this.getCurrentUrl()}); }
+			casper.waitFor(commands.checkDocumentReadyState, function then() {
+				if(callback) { callback({'url': this.getCurrentUrl()}); }
+			});
 		});
 	},
 
@@ -93,6 +95,17 @@ var commands = {
 			if(callback) { callback({'url': this.getCurrentUrl()}); }
 		});
 		return true;
+	},
+
+	'screenshot': function(filename, callback) {
+
+		filename = filename || new Date().getTime() + Math.random().toString().replace(/\./, '0') + '.png';
+		filename = 'screenshots/' + filename;
+
+		casper.capture(filename);
+
+		if(callback) { callback({'filename': filename}); }
+
 	},
 
 	'select': function(selector, callback) {
@@ -111,11 +124,11 @@ var commands = {
 			if(!el) { return false; }
 			el.actions = processActions(el);
 
-			if(callback) { callback(el); }
+			if(callback) { callback({'element': el}); }
 
 		}, function timeout() {
 
-			if(callback) { callback(null); }
+			if(callback) { callback({'element': null}); }
 
 		});
 	},
@@ -140,20 +153,47 @@ var commands = {
 				els[i].actions = processActions(els[i]);
 			}
 
-			if(callback) { callback(els); }
+			if(callback) { callback({'elements': els}); }
 
 		}, function timeout() {
 
-			if(callback) { callback(null); }
+			if(callback) { callback({'elements': null}); }
 
 		});
 	},
 
+	'sendKeys': function(data, callback) {
+
+		casper.waitForSelector(data.selector, function then() {
+
+			this.sendKeys(data.selector, data.string);
+
+			if(callback) { callback(true); }
+
+		});
+
+	},
+
+	'submitForm': function(selector, callback) {
+
+		casper.waitForSelector(selector, function then() {
+
+			this.evaluate( function(selector) {
+				document.querySelector(selector).submit();
+			}, {selector: selector});
+
+			if(callback) { callback(true); }
+
+		});
+
+	},
+
 	'scrollPageToEnd': function(data, callback) {
+
+		var data = data || {};
 
 		casper.on('scroll', function() {
 
-			data = data || {};
 			data.prevScrollTop = data.prevScrollTop || 0;
 			data.tries = data.tries || 0;
 			data.tryLimit = data.tryLimit || 5;
@@ -188,6 +228,7 @@ var commands = {
 
 		casper.on('done', function(scrollTop) {
 
+			casper.unwait();
 			data.prevScrollTop = scrollTop;
 			if(callback) { callback({'scrollTop': scrollTop}); }
 			return;
@@ -196,6 +237,15 @@ var commands = {
 
 		casper.emit('scroll');
 		return;
+
+	},
+
+	'checkDocumentReadyState': function() {
+
+		var readyState = casper.evaluate(function() {
+			return document.readyState == 'complete';
+		});
+		return readyState;
 
 	}
 
@@ -228,7 +278,7 @@ function main() {
 		data[step].data = data[step].data || null;
 		data[step].waiting = true;
 		casper.emit('save');
-		//console.log(data[step].command, data[step].data);
+		console.log(data[step].command, JSON.stringify(data[step].data));
 		commands[data[step].command](data[step].data, function(res) {
 			casper.emit('commandProcessed', res);
 		});
@@ -251,7 +301,7 @@ function main() {
 	});
 
 	casper.on('save', function() {
-		fs.write(fileName, JSON.stringify(data), 'w');
+		fs.write(fileName, JSON.stringify(data, null, 2), 'w');
 	});
 
 	casper.on('waitForCommands', function() {
@@ -261,41 +311,6 @@ function main() {
 	});
 
 	casper.emit('load');
-
-	/*casper.wait(500, function() {
-
-		var fileName = campaign['id'] + '.json';
-		var data = '';
-		if(fs.exists(fileName)) {
-			data = JSON.parse(fs.read(fileName));
-			for(var i in data) {
-				if(!data[i].processed && data[i].command && commands[data[i].command]) {
-					if(data[i].waiting) { continue; }
-					console.log('Running command...');
-					data[i].data = data[i].data || null;
-					data[i].waiting = true;
-					commands[data[i].command](data[i].data, function response(res) {
-						casper.emit('commandProcessed');
-						//console.log('command: ', data[this].command, data[this].data);
-						//console.log('result:  ', JSON.stringify(res));
-						console.log(JSON.stringify(res));
-						commandProcessed = true;
-						data[this].processed = true;
-						data[this].waiting = false;
-						fs.write(fileName, JSON.stringify(data), 'w');
-						main();
-					}.bind(i));
-					fs.write(fileName, JSON.stringify(data), 'w');
-				}
-			}
-		}
-		//console.log(campaign['timer']);
-		campaign['timer']++;
-		if(campaign['timer'] == campaign['limit'] || campaign['complete']) { return; }
-		// Try again
-		main();
-
-	});*/
 
 }
 
