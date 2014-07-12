@@ -17,7 +17,7 @@ var campaign = {
 	'id': args[0],
 	'complete': false,
 	'timer': 0,
-	'limit': 100
+	'limit': 5
 };
 
 var nodeNameActions = {
@@ -82,11 +82,19 @@ var processActions = function(el) {
 var commands = {
 
 	'click': function(selector, callback) {
+		var returns = {'url': null };
 		casper.waitForSelector(selector, function then() {
 			this.click(selector);
 			casper.waitFor(commands.checkDocumentReadyState, function then() {
-				if(callback) { callback({'url': this.getCurrentUrl()}); }
+				if(callback) {
+					returns.url = this.getCurrentUrl();
+					callback(returns);
+				}
 			});
+		}, function fail() {
+			if(callback) {
+				callback(returns);
+			}
 		});
 	},
 
@@ -192,7 +200,7 @@ var commands = {
 
 		var data = data || {};
 
-		casper.on('scroll', function() {
+		casper.on('scrollPageToEnd.scroll', function() {
 
 			data.prevScrollTop = data.prevScrollTop || 0;
 			data.tries = data.tries || 0;
@@ -215,18 +223,18 @@ var commands = {
 			data.prevScrollTop = scrollTop;
 
 			if(data.tries >= data.tryLimit) {
-				casper.emit('done', scrollTop);
+				casper.emit('scrollPageToEnd.done', scrollTop);
 				return;
 			}
 			else {
 				casper.wait(1000, function() {
-					casper.emit('scroll');
+					casper.emit('scrollPageToEnd.scroll');
 				});
 			}
 
 		});
 
-		casper.on('done', function(scrollTop) {
+		casper.on('scrollPageToEnd.done', function(scrollTop) {
 
 			casper.unwait();
 			data.prevScrollTop = scrollTop;
@@ -235,7 +243,7 @@ var commands = {
 
 		});
 
-		casper.emit('scroll');
+		casper.emit('scrollPageToEnd.scroll');
 		return;
 
 	},
@@ -260,57 +268,61 @@ function main() {
 		Provide output in the console so that processes monitoring this agent can take more immediate action
 	*/
 
-	casper.on('load', function() {
+	casper.on('main.load', function() {
 		fileName = campaign['id'] + '.json';
 		if(!fs.exists(fileName)) { return; }
 		data = JSON.parse(fs.read(fileName));
 		dataLen = data.length;
 		step = 0;
-		casper.emit('processCommand');
+		casper.emit('main.processCommand');
 	});
 
-	casper.on('processCommand', function() {
+	casper.on('main.processCommand', function() {
 		data[step].processed = data[step].processed || false;
 		if(data[step].processed) {
-			casper.emit('processNextCommand');
+			casper.emit('main.processNextCommand');
 			return;
 		}
 		data[step].data = data[step].data || null;
 		data[step].waiting = true;
-		casper.emit('save');
+		casper.emit('main.save');
 		console.log(data[step].command, JSON.stringify(data[step].data));
 		commands[data[step].command](data[step].data, function(res) {
-			casper.emit('commandProcessed', res);
+			casper.emit('main.commandProcessed', res);
 		});
 	});
 
-	casper.on('processNextCommand', function() {
+	casper.on('main.processNextCommand', function() {
 		step++;
-		if(step >= dataLen) { casper.emit('waitForCommands'); return; }
-		casper.emit('processCommand');
+		if(step >= dataLen) { casper.emit('main.waitForCommands'); return; }
+		casper.emit('main.processCommand');
 	});
 
-	casper.on('commandProcessed', function(res) {
+	casper.on('main.commandProcessed', function(res) {
 		console.log(JSON.stringify(res));
 		data[step].waiting = false;
 		data[step].processed = true;
-		casper.emit('save');
-		step++;
-		if(step >= dataLen) { casper.emit('waitForCommands'); return; }
-		casper.emit('processCommand');
+		casper.emit('main.save');
+		casper.emit('main.processNextCommand');
 	});
 
-	casper.on('save', function() {
+	casper.on('main.save', function() {
 		fs.write(fileName, JSON.stringify(data, null, 2), 'w');
 	});
 
-	casper.on('waitForCommands', function() {
+	casper.on('main.waitForCommands', function() {
+		campaign.timer++;
+		//if(campaign.timer >= campaign.limit) { casper.emit('main.done'); return; }
 		casper.wait(1000, function() {
-			casper.emit('load');
+			casper.emit('main.load');
 		});
 	});
 
-	casper.emit('load');
+	casper.on('main.done', function() {
+		casper.exit();
+	});
+
+	casper.emit('main.load');
 
 }
 
