@@ -98,6 +98,12 @@ var commands = {
 		});
 	},
 
+	'done' : function(data, callback) {
+
+		if(callback) { callback({'done': true}); }
+
+	},
+
 	'open': function(url, callback) {
 		casper.thenOpen(url, function() {
 			if(callback) { callback({'url': this.getCurrentUrl()}); }
@@ -286,7 +292,6 @@ function main() {
 		data[step].data = data[step].data || null;
 		data[step].waiting = true;
 		casper.emit('main.save');
-		console.log(data[step].command, JSON.stringify(data[step].data));
 		commands[data[step].command](data[step].data, function(res) {
 			casper.emit('main.commandProcessed', res);
 		});
@@ -299,10 +304,12 @@ function main() {
 	});
 
 	casper.on('main.commandProcessed', function(res) {
+		res.command = data[step].command;
 		console.log(JSON.stringify(res));
 		data[step].waiting = false;
 		data[step].processed = true;
 		casper.emit('main.save');
+		if(data[step].command == 'done') { casper.emit('main.done'); return; }
 		casper.emit('main.processNextCommand');
 	});
 
