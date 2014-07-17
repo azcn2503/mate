@@ -1,6 +1,5 @@
 var db = require('mongodb');
 var events = require('events');
-var eventEmitter = new events.EventEmitter();
 var fs = require('fs');
 var webdriver = require('selenium-webdriver');
 
@@ -16,6 +15,20 @@ var campaign = {
 	'complete': false,
 	'timer': 0,
 	'limit': 5
+};
+
+var helperFunctions = {
+	'stringifyDOM': function(orig, tmp, level) {
+	    var tmp = tmp || {};
+	    var level = level || 0;
+	    for(var i in orig) {
+	        if(!orig[i]) { continue; }
+	        if(typeof(orig[i]) === 'function' || typeof(orig[i]) === 'object' || level > 1) { continue; }
+	        if(typeof(orig[i]) === 'array') { level++; helperFunctions.stringifyDOM(orig[i], tmp, level); continue; }
+	        tmp[i] = orig[i]; continue;
+	    }
+	    return JSON.stringify(tmp);
+	}
 };
 
 var commands = {
@@ -127,7 +140,12 @@ var commands = {
 	'select': function(selector, callback) {
 
 		driver.findElement(webdriver.By.css(selector)).then( function(el) {
-			callback({'count': true});
+			callback({
+				'data': {
+					'count': 1
+				},
+				'native': el
+			});
 		});
 
 	},
@@ -135,7 +153,12 @@ var commands = {
 	'selectAll': function(selector, callback) {
 
 		driver.findElements(webdriver.By.css(selector)).then( function(els) {
-			callback({'count': els.length});
+			callback({
+				'data': {
+					'count': els.length
+				},
+				'native': els
+			});
 		});
 
 	},
@@ -168,19 +191,23 @@ var Mate = function() {
 	var self = this;
 
 	this.eventEmitter.on('save', function() {
+
 		fs.writeFileSync(self.fileName, JSON.stringify(self.data, null, '\t'), {'encoding': 'utf-8'});
+
 	});
 
 	this.eventEmitter.on('load', function() {
-		//console.log('Loading...');
+
 		self.fileName = campaign.id + '.json';
 		var content = fs.readFileSync(self.fileName, {'encoding': 'utf-8'});
 		self.data = JSON.parse(content);
 		self.step = 0;
 		self.eventEmitter.emit('processCommand');
+
 	});
 
 	this.eventEmitter.on('processCommand', function() {
+
 		self.data[self.step].processed = self.data[self.step].processed || false;
 		if(self.data[self.step].processed) {
 			self.eventEmitter.emit('processNextCommand');
@@ -198,9 +225,11 @@ var Mate = function() {
 		commands[self.data[self.step].command](self.data[self.step].data, function(res) {
 			self.eventEmitter.emit('commandProcessed', res);
 		});
+
 	});
 
 	this.eventEmitter.on('processNextCommand', function(reason) {
+
 		if(reason) { console.log(reason); }
 		self.step++;
 		if(self.step >= self.data.length) { 
@@ -208,12 +237,18 @@ var Mate = function() {
 			return;
 		}
 		self.eventEmitter.emit('processCommand');
+
 	});
 
 	this.eventEmitter.on('commandProcessed', function(res) {
+
 		res = res || {};
 		res.command = self.data[self.step].command;
-		console.log(JSON.stringify(res));
+
+		var printable = {};
+		for(var i in res) { if(i == 'native') { continue; } printable[i] = res[i]; }
+
+		console.log(JSON.stringify(printable));
 		self.data[self.step].waiting = false;
 		self.data[self.step].processed = true;
 		self.eventEmitter.emit('save');
@@ -222,18 +257,23 @@ var Mate = function() {
 			return;
 		}
 		self.eventEmitter.emit('processNextCommand');
+
 	});
 
 	this.eventEmitter.on('done', function() {
+
 		campaign.complete = true;
+
 	});
 
 	this.eventEmitter.on('waitForCommands', function() {
+
 		//console.log('Waiting for commands...');
 		campaign.timer++;
 		setTimeout( function() {
 			self.eventEmitter.emit('load');
 		}, 1000);
+
 	});
 
 	this.eventEmitter.emit('load');
