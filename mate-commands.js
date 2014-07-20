@@ -3,6 +3,7 @@ var driver = new webdriver.Builder()
 	.withCapabilities(webdriver.Capabilities.phantomjs())
 	.build();
 var events = require('events');
+var fs = require('fs');
 
 var commands = {
 
