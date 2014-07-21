@@ -23,6 +23,25 @@ var commands = {
 
 	},
 
+	'evalEach': function(data, step, callback) {
+
+		var fromStep     = data[step].data.fromStep;
+		var evalScript   = data[step].data.eval;
+		var fromStepData = data[fromStep].result.data;
+
+		var res = [];
+
+		evalScript = '(function() {' + evalScript + '}.bind(s))()';
+
+		for(var i in fromStepData) {
+			var s = fromStepData[i];
+			res.push(eval(evalScript));
+		}
+
+		callback({data: res});
+
+	},
+
 	'getAttributeValues': function(data, step, callback) {
 
 		var fromStep                = data[step].data.fromStep;
