@@ -54,14 +54,15 @@ var Mate = function() {
 			}
 			self.data[self.step].data = self.data[self.step].data || null;
 			self.data[self.step].waiting = true;
-			self.eventEmitter.emit('main.save');
+			self.data[self.step].step = self.step;
+			self.eventEmitter.emit('save');
 			console.log('Command: ', self.data[self.step].command);
 			console.log('Data:    ', self.data[self.step].data);
 			if(!commands[self.data[self.step].command]) {
 				self.eventEmitter.emit('processNextCommand', 'Command `' + self.data[self.step].command + '` does not exist');
 				return;
 			};
-			commands[self.data[self.step].command](self.data[self.step].data, function(res) {
+			commands[self.data[self.step].command](self.data, self.step, function(res) {
 				self.eventEmitter.emit('commandProcessed', res);
 			});
 
@@ -71,7 +72,7 @@ var Mate = function() {
 
 			if(reason) { console.log(reason); }
 			self.step++;
-			if(self.step >= self.data.length) { 
+			if(self.step >= self.data.length) {
 				self.eventEmitter.emit('waitForCommands');
 				return;
 			}
@@ -88,6 +89,7 @@ var Mate = function() {
 			console.log('\n---\n');
 			self.data[self.step].waiting = false;
 			self.data[self.step].processed = true;
+			self.data[self.step].result = res;
 			self.eventEmitter.emit('save');
 			if(self.data[self.step].command == 'done') {
 				self.eventEmitter.emit('done');

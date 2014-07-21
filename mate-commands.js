@@ -7,7 +7,9 @@ var fs = require('fs');
 
 var commands = {
 
-	'click': function(selector, callback) {
+	'click': function(data, step, callback) {
+
+		var selector = data[step].data;
 
 		driver.findElement(webdriver.By.css(selector)).click();
 
@@ -15,13 +17,34 @@ var commands = {
 
 	},
 
-	'done': function(data, callback) {
+	'done': function(data, step, callback) {
 
 		callback({});
 
 	},
 
-	'open': function(url, callback) {
+	'getAttributeValues': function(data, step, callback) {
+
+		var fromStep = data[step].data.fromStep;
+		var fromStepData = data[fromStep].result.elements || data[fromStep].result.element || data[fromStep].result.data;
+		var attributeName = data[step].data.attributeName;
+
+		var res = [];
+
+		for(var i in fromStepData) {
+			if(fromStepData[i][attributeName]) {
+				//console.log(attributeName, fromStepData[i][attributeName]);
+				res.push(fromStepData[i][attributeName]);
+			}
+		}
+
+		callback({data: res});
+
+	},
+
+	'open': function(data, step, callback) {
+
+		var url = data[step].data;
 
 		var evalGetUrl = function() {
 			return location.href;
@@ -34,7 +57,9 @@ var commands = {
 
 	},
 
-	'screenshot': function(filename, callback) {
+	'screenshot': function(data, step, callback) {
+
+		var filename = data[step].data;
 
 		filename = filename || new Date().getTime() + Math.random().toString().replace(/\./, '0') + '.png';
 		filename = 'screenshots/' + filename;
@@ -46,7 +71,9 @@ var commands = {
 
 	},
 
-	'scrollPageToEnd': function(data, callback) {
+	'scrollPageToEnd': function(data, step, callback) {
+
+		var data = data[step].data;
 
 		var self = this;
 
@@ -111,7 +138,9 @@ var commands = {
 
 	},
 
-	'select': function(selector, callback) {
+	'select': function(data, step, callback) {
+
+		var selector = data[step].data;
 
 		var evalSelect = function(selector) {
 
@@ -143,7 +172,7 @@ var commands = {
 
 			driver.executeScript(evalSelect, selector).then( function(nativeEl) {
 				callback({
-					'data': nativeEl
+					'element': JSON.parse(nativeEl)
 				});
 			});
 
@@ -151,7 +180,9 @@ var commands = {
 
 	},
 
-	'selectAll': function(selector, callback) {
+	'selectAll': function(data, step, callback) {
+
+		var selector = data[step].data;
 
 		var evalSelectAll = function(selector) {
 
@@ -188,7 +219,7 @@ var commands = {
 
 			driver.executeScript(evalSelectAll, selector).then( function(nativeEls) {
 				callback({
-					'data': nativeEls
+					'elements': JSON.parse(nativeEls)
 				});
 			});
 
@@ -196,7 +227,9 @@ var commands = {
 
 	},
 
-	'sendKeys': function(data, callback) {
+	'sendKeys': function(data, step, callback) {
+
+		var data = data[step].data;
 
 		var self = this;
 
