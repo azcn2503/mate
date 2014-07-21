@@ -45,7 +45,7 @@ var commands = {
 	'getAttributeValues': function(data, step, callback) {
 
 		var fromStep                = data[step].data.fromStep; // required
-		var attributeName           = data[step].data.attributeName; //required
+		var attributeName           = data[step].data.attributeName; // required
 		var matchingExpression      = data[step].data.matchingExpression || null;
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 		var fromStepData            = data[fromStep].result.data.elements || data[fromStep].result.data.element || data[fromStep].result.data;
@@ -114,18 +114,36 @@ var commands = {
 
 	},
 
+	'save': function(data, step, callback) {
+
+		var fromStep     = data[step].data.fromStep;
+		var fileName     = data[step].data.fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0') + '.json';
+		var fromStepData = data[fromStep].result.data;
+
+		fileName = 'commands/save/' + fileName;
+
+		fs.writeFileSync(fileName, JSON.stringify(fromStepData), {'encoding': 'utf-8'});
+
+		callback({
+			data: {
+				'filename': fileName
+			}
+		});
+
+	},
+
 	'screenshot': function(data, step, callback) {
 
-		var filename = data[step].data;
+		var fileName = data[step].data;
 
-		filename = filename || new Date().getTime() + Math.random().toString().replace(/\./, '0') + '.png';
-		filename = 'screenshots/' + filename;
+		fileName = fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0') + '.png';
+		fileName = 'commands/screenshot/' + fileName;
 
 		driver.takeScreenshot().then( function(data) {
-			fs.writeFileSync(filename, data, {'encoding': 'base64'});
+			fs.writeFileSync(fileName, data, {'encoding': 'base64'});
 			callback({
 				data: {
-					'filename': filename
+					'filename': fileName
 				}
 			});
 		});
