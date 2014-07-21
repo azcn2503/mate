@@ -44,8 +44,8 @@ var commands = {
 
 	'getAttributeValues': function(data, step, callback) {
 
-		var fromStep                = data[step].data.fromStep;
-		var attributeName           = data[step].data.attributeName;
+		var fromStep                = data[step].data.fromStep; // required
+		var attributeName           = data[step].data.attributeName; //required
 		var matchingExpression      = data[step].data.matchingExpression || null;
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 		var fromStepData            = data[fromStep].result.data.elements || data[fromStep].result.data.element || data[fromStep].result.data;
@@ -59,6 +59,35 @@ var commands = {
 					if(!re.test(fromStepData[i][attributeName])) { continue; }
 				}
 				res.push(fromStepData[i][attributeName]);
+			}
+		}
+
+		callback({data: res});
+
+	},
+
+	'matchEach': function(data, step, callback) {
+
+		var fromStep                = data[step].data.fromStep; // required
+		var matchingExpression      = data[step].data.matchingExpression; // required
+		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
+		var mode                    = data[step].data.mode || 'match';
+		var fromStepData            = data[fromStep].result.data;
+
+		var res = [];
+
+		var re = new RegExp(matchingExpression, matchingExpressionFlags);
+
+		for(var i in fromStepData) {
+			if(!re.test(fromStepData[i])) { continue; }
+			if(mode == 'full') {
+				res.push(fromStepData[i]);
+			}
+			if(mode == 'array') {
+				res.push(fromStepData[i].match(re));
+			}
+			if(mode == 'match') {
+				res.push(fromStepData[i].match(re)[0]);
 			}
 		}
 
