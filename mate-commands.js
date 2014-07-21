@@ -19,21 +19,26 @@ var commands = {
 
 	'done': function(data, step, callback) {
 
-		callback({});
+		callback();
 
 	},
 
 	'getAttributeValues': function(data, step, callback) {
 
-		var fromStep = data[step].data.fromStep;
-		var fromStepData = data[fromStep].result.elements || data[fromStep].result.element || data[fromStep].result.data;
-		var attributeName = data[step].data.attributeName;
+		var fromStep                = data[step].data.fromStep;
+		var attributeName           = data[step].data.attributeName;
+		var matchingExpression      = data[step].data.matchingExpression || null;
+		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
+		var fromStepData            = data[fromStep].result.data.elements || data[fromStep].result.data.element || data[fromStep].result.data;
 
 		var res = [];
 
 		for(var i in fromStepData) {
 			if(fromStepData[i][attributeName]) {
-				//console.log(attributeName, fromStepData[i][attributeName]);
+				if(matchingExpression) {
+					var re = new RegExp(matchingExpression, matchingExpressionFlags);
+					if(!re.test(fromStepData[i][attributeName])) { continue; }
+				}
 				res.push(fromStepData[i][attributeName]);
 			}
 		}
@@ -52,7 +57,11 @@ var commands = {
 
 		driver.get(url);
 		driver.executeScript(evalGetUrl).then( function(actualUrl) {
-			callback({'url': actualUrl});
+			callback({
+				data: {
+					'url': actualUrl
+				}
+			});
 		});
 
 	},
@@ -66,7 +75,11 @@ var commands = {
 
 		driver.takeScreenshot().then( function(data) {
 			fs.writeFileSync(filename, data, {'encoding': 'base64'});
-			callback({'filename': filename});
+			callback({
+				data: {
+					'filename': filename
+				}
+			});
 		});
 
 	},
@@ -128,7 +141,11 @@ var commands = {
 		this.eventEmitter.on('done', function(scrollTop) {
 
 			data.prevScrollTop = scrollTop;
-			if(callback) { callback({'scrollTop': scrollTop}); }
+			if(callback) { callback({
+				data: {
+					'scrollTop': scrollTop
+				}
+			}); }
 			return;
 
 		});
@@ -172,7 +189,9 @@ var commands = {
 
 			driver.executeScript(evalSelect, selector).then( function(nativeEl) {
 				callback({
-					'element': JSON.parse(nativeEl)
+					data: {
+						'element': JSON.parse(nativeEl)
+					}
 				});
 			});
 
@@ -219,7 +238,9 @@ var commands = {
 
 			driver.executeScript(evalSelectAll, selector).then( function(nativeEls) {
 				callback({
-					'elements': JSON.parse(nativeEls)
+					data: {
+						'elements': JSON.parse(nativeEls)
+					}
 				});
 			});
 
