@@ -44,11 +44,12 @@ var commands = {
 
 	'getAttributeValues': function(data, step, callback) {
 
-		var fromStep                = data[step].data.fromStep; // required
+		var fromStep                = data[step].data.fromStep || step - 1; // required
 		var attributeName           = data[step].data.attributeName; // required
 		var matchingExpression      = data[step].data.matchingExpression || null;
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 		var fromStepData            = data[fromStep].result.data.elements || data[fromStep].result.data.element || data[fromStep].result.data;
+		if(typeof(fromStepData) === 'object') { fromStepData = [fromStepData]; }
 
 		var res = [];
 

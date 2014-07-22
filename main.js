@@ -55,7 +55,13 @@ var Mate = function() {
 			self.data[self.step].data = self.data[self.step].data || null;
 			self.data[self.step].waiting = true;
 			self.data[self.step].step = self.step;
+			self.data[self.step].performance = {
+				'start': Date.now(),
+				'end': null
+			};
+
 			self.eventEmitter.emit('save');
+			
 			console.log('Command: ', self.data[self.step].command);
 			console.log('Data:    ', self.data[self.step].data);
 			if(!commands[self.data[self.step].command]) {
@@ -90,6 +96,7 @@ var Mate = function() {
 			self.data[self.step].waiting = false;
 			self.data[self.step].processed = true;
 			self.data[self.step].result = res;
+			self.data[self.step].performance.end = Date.now();
 			self.eventEmitter.emit('save');
 			
 			if(self.data[self.step].command == 'done') {
