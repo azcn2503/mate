@@ -114,6 +114,15 @@ var commands = {
 
 	},
 
+	'repeat': function(data, step, callback) {
+
+		var repeatStep = data[step].data;
+		var repeatCommand = data[repeatStep].command;
+
+		commands[repeatCommand](data, repeatStep, callback);
+
+	},
+
 	'save': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep;

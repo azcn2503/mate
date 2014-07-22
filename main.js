@@ -86,14 +86,17 @@ var Mate = function() {
 
 			console.log(res);
 			console.log('\n---\n');
+
 			self.data[self.step].waiting = false;
 			self.data[self.step].processed = true;
 			self.data[self.step].result = res;
 			self.eventEmitter.emit('save');
+			
 			if(self.data[self.step].command == 'done') {
 				self.eventEmitter.emit('done');
 				return;
 			}
+			
 			self.eventEmitter.emit('processNextCommand');
 
 		});
