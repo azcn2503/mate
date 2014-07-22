@@ -40,7 +40,8 @@ var commands = {
 				'lte': '<=',
 				'null': 'null',
 				'notnull': 'notnull',
-				'contains': 'contains'
+				'contains': 'contains',
+				'notcontains': 'notcontains'
 			};
 
 			switch(is) {
@@ -75,6 +76,10 @@ var commands = {
 
 				case 'contains':
 					if(fromStepData.indexOf(to) != -1) { res.assert = true; }
+				break;
+
+				case 'notcontains':
+					if(fromStepData.indexOf(to) == -1) { res.assert = true; }
 				break;
 
 			}
