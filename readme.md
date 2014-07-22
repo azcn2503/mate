@@ -211,15 +211,21 @@ Example:
     
 Will try to scroll three times past the end of the page before returning results.
 
+---
+
 #### select
 **data**: `CSS Selector string`
 
 Select an element defined by the CSS selector string and return its data.
 
+---
+
 #### selectAll
 **data**: `CSS Selector string`
 
 Select multiple elements defined by the CSS selector string and return all of their data.
+
+---
 
 #### sendKeys
 **data**: { `selector`, `string` }
