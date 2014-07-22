@@ -20,6 +20,7 @@ var Mate = function() {
 	this.data = [];
 	this.step = 0;
 	this.eventEmitter = new events.EventEmitter();
+	this.forceRetry = false;
 
 	this.setCampaign = function(campaign) {
 
@@ -48,7 +49,7 @@ var Mate = function() {
 		self.eventEmitter.on('processCommand', function() {
 
 			self.data[self.step].processed = self.data[self.step].processed || false;
-			if(self.data[self.step].processed) {
+			if(self.data[self.step].processed && !self.forceRetry) {
 				self.eventEmitter.emit('processNextCommand');
 				return;
 			}
@@ -131,6 +132,7 @@ var Mate = function() {
 
 var mate = new Mate();
 mate.setCampaign(args[2]);
+if(args[3] && args[3] == 'force') { mate.forceRetry = true; }
 mate.exec();
 
 (function wait() {

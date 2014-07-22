@@ -27,7 +27,6 @@ var commands = {
 		while(1) {
 
 			if(to == null || fromStepData == null) {
-				console.log(fromIndex, to, fromStepData);
 				res = false;
 				break;
 			}
@@ -344,7 +343,7 @@ var commands = {
 
 			var el = document.querySelector(selector);
 
-			var el2 = getElementEssentials(el);
+			var el2 = [getElementEssentials(el)];
 
 			var elStringified = JSON.stringify(el2);
 
