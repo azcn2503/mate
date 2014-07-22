@@ -9,11 +9,11 @@ var commands = {
 
 	'assert': function(data, step, callback) {
 
-		var fromStep      = data[step].data.fromStep;
-		var fromStepIndex = data[step].data.fromIndex;
-		var is            = data[step].data.is;
-		var to            = data[step].data.to;
-		var fromStepData  = data[fromStep].result.data[fromStepIndex];
+		var fromStep     = data[step].data.fromStep || step - 1;
+		var fromIndex    = data[step].data.fromIndex || 0;
+		var is           = data[step].data.is || 'equal';
+		var to           = data[step].data.to || null;
+		var fromStepData = data[fromStep].result.data[fromIndex] || null;
 
 		var res = {
 			assert: false,
@@ -24,52 +24,69 @@ var commands = {
 			}
 		};
 
-		var aliases = {
-			'equal': '=',
-			'gt': '>',
-			'gte': '>=',
-			'lt': '<',
-			'lte': '<=',
-			'null': 'null',
-			'notnull': 'notnull'
-		};
+		while(1) {
 
-		switch(is) {
+			if(to == null || fromStepData == null) {
+				console.log(fromIndex, to, fromStepData);
+				res = false;
+				break;
+			}
 
-			case 'equal':
-				if(fromStepData == to) { res.assert = true; }
-			break;
+			var aliases = {
+				'equal': '=',
+				'gt': '>',
+				'gte': '>=',
+				'lt': '<',
+				'lte': '<=',
+				'null': 'null',
+				'notnull': 'notnull',
+				'contains': 'contains'
+			};
 
-			case 'gt':
-				if(fromStepData > to) { res.assert = true; }
-			break;
+			switch(is) {
 
-			case 'gte':
-				if(fromStepData >= to) { res.assert = true; }
-			break;
+				case 'equal':
+					if(fromStepData == to) { res.assert = true; }
+				break;
 
-			case 'lt':
-				if(fromStepData < to) { res.assert = true; }
-			break;
+				case 'gt':
+					if(fromStepData > to) { res.assert = true; }
+				break;
 
-			case 'lte':
-				if(fromStepData <= to) { res.assert = true; }
-			break;
+				case 'gte':
+					if(fromStepData >= to) { res.assert = true; }
+				break;
 
-			case 'null':
-				if(fromStepData === null) { res.assert = true; }
-			break;
+				case 'lt':
+					if(fromStepData < to) { res.assert = true; }
+				break;
 
-			case 'notnull':
-				if(fromStepData !== null) { res.assert = true; }
+				case 'lte':
+					if(fromStepData <= to) { res.assert = true; }
+				break;
+
+				case 'null':
+					if(fromStepData === null) { res.assert = true; }
+				break;
+
+				case 'notnull':
+					if(fromStepData !== null) { res.assert = true; }
+				break;
+
+				case 'contains':
+					if(fromStepData.indexOf(to) != -1) { res.assert = true; }
+				break;
+
+			}
+
+			res.reason.expected = aliases[is] + ' ' + to;
+			res.reason.actual = fromStepData;
+
+			res.reason.message = res.assert ? 'pass' : 'fail';
+
 			break;
 
 		}
-
-		res.reason.expected = aliases[is] + ' ' + to;
-		res.reason.actual = fromStepData;
-
-		res.reason.message = res.assert ? 'pass' : 'fail';
 
 		callback({data: res});
 
