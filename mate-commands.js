@@ -7,6 +7,74 @@ var fs = require('fs');
 
 var commands = {
 
+	'assert': function(data, step, callback) {
+
+		var fromStep      = data[step].data.fromStep;
+		var fromStepIndex = data[step].data.fromIndex;
+		var is            = data[step].data.is;
+		var to            = data[step].data.to;
+		var fromStepData  = data[fromStep].result.data[fromStepIndex];
+
+		var res = {
+			assert: false,
+			reason: {
+				message: '',
+				expected: '',
+				actual: ''
+			}
+		};
+
+		var aliases = {
+			'equal': '=',
+			'gt': '>',
+			'gte': '>=',
+			'lt': '<',
+			'lte': '<=',
+			'null': 'null',
+			'notnull': 'notnull'
+		};
+
+		switch(is) {
+
+			case 'equal':
+				if(fromStepData == to) { res.assert = true; }
+			break;
+
+			case 'gt':
+				if(fromStepData > to) { res.assert = true; }
+			break;
+
+			case 'gte':
+				if(fromStepData >= to) { res.assert = true; }
+			break;
+
+			case 'lt':
+				if(fromStepData < to) { res.assert = true; }
+			break;
+
+			case 'lte':
+				if(fromStepData <= to) { res.assert = true; }
+			break;
+
+			case 'null':
+				if(fromStepData === null) { res.assert = true; }
+			break;
+
+			case 'notnull':
+				if(fromStepData !== null) { res.assert = true; }
+			break;
+
+		}
+
+		res.reason.expected = aliases[is] + ' ' + to;
+		res.reason.actual = fromStepData;
+
+		res.reason.message = res.assert ? 'pass' : 'fail';
+
+		callback({data: res});
+
+	},
+
 	'click': function(data, step, callback) {
 
 		var selector = data[step].data;
@@ -48,8 +116,8 @@ var commands = {
 		var attributeName           = data[step].data.attributeName; // required
 		var matchingExpression      = data[step].data.matchingExpression || null;
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
-		var fromStepData            = data[fromStep].result.data.elements || data[fromStep].result.data.element || data[fromStep].result.data;
-		if(typeof(fromStepData) === 'object') { fromStepData = [fromStepData]; }
+		var fromStepData            = data[fromStep].result.data;
+		//if(typeof(fromStepData) === 'object') { fromStepData = [fromStepData]; }
 
 		var res = [];
 
@@ -266,9 +334,7 @@ var commands = {
 
 			driver.executeScript(evalSelect, selector).then( function(nativeEl) {
 				callback({
-					data: {
-						'element': JSON.parse(nativeEl)
-					}
+					data: JSON.parse(nativeEl)
 				});
 			});
 
@@ -316,9 +382,7 @@ var commands = {
 
 			driver.executeScript(evalSelectAll, selector).then( function(nativeEls) {
 				callback({
-					data: {
-						'elements': JSON.parse(nativeEls)
-					}
+					data: JSON.parse(nativeEls)
 				});
 			});
 
