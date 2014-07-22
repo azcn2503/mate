@@ -83,7 +83,6 @@ var Mate = function() {
 		self.eventEmitter.on('commandProcessed', function(res) {
 
 			res = res || {};
-			res.command = self.data[self.step].command;
 
 			console.log(res);
 			console.log('\n---\n');

@@ -231,6 +231,7 @@ var commands = {
 			    var tmp = tmp || {};
 			    var level = level || 0;
 			    for(var i in orig) {
+			    	if(i == 'selectionDirection' || i == 'selectionEnd' || i == 'selectionStart') { continue; }
 			        if(!orig[i]) { continue; }
 			        if(!i.match(/[a-z]/)) { continue; }
 			        if(typeof(orig[i]) === 'function' || typeof(orig[i]) === 'object' || level > 1) { continue; }
@@ -275,6 +276,7 @@ var commands = {
 			    var tmp = tmp || {};
 			    var level = level || 0;
 			    for(var i in orig) {
+			    	if(i == 'selectionDirection' || i == 'selectionEnd' || i == 'selectionStart') { continue; }
 			        if(!orig[i]) { continue; }
 			        if(!i.match(/[a-z]/)) { continue; }
 			        if(typeof(orig[i]) === 'function' || typeof(orig[i]) === 'object' || level > 1) { continue; }
