@@ -49,6 +49,31 @@ You can process it by running:
     
 ### Commands
 
+#### assert
+**data**: {`fromStep`, `fromIndex`, `operator`, `expected`}
+
+Assert that the data from step `fromStep[fromIndex]` matches the `expected` value compared by the `operator`.
+
+`operator` can be one of the following: `equal` compares if they are the same, `gt` compares if the actual is greater than the expected, `gte` compares if the actual is greater than or equal to the expected, `lt` compares if the actual is less than the expected, `lte` compares if the actual is less than or equal to the expected, `null` compares if the actual is null, `notnull` compares if the actual is not null, `contains` compares if the actual contains the expected value, `notcontains` compares if the actual does not contain the expected value.
+
+Example:
+
+    {
+        "command": "assert",
+        "data": {
+            "fromStep": 1,
+            "fromIndex": 0,
+            "operator": "equal",
+            "expected": "anjunabeats"
+        }
+    }
+
+Will assert that the data from step 1 at index 0 (first entry in the array) is equal to `anjunabeats`. 
+
+Returns: { 'assert': bool, 'reason': { 'message': string, 'expected': string, 'actual': string } }
+
+---
+
 #### click
 **data**: `CSS Selector string`
 

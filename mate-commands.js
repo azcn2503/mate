@@ -11,8 +11,8 @@ var commands = {
 
 		var fromStep     = data[step].data.fromStep || step - 1;
 		var fromIndex    = data[step].data.fromIndex || 0;
-		var is           = data[step].data.is || 'equal';
-		var to           = data[step].data.to || null;
+		var operator           = data[step].data.operator || 'equal';
+		var expected           = data[step].data.expected || null;
 		var fromStepData = data[fromStep].result.data[fromIndex] || null;
 
 		var res = {
@@ -26,7 +26,7 @@ var commands = {
 
 		while(1) {
 
-			if(to == null || fromStepData == null) {
+			if(expected == null || fromStepData == null) {
 				res = false;
 				break;
 			}
@@ -43,26 +43,26 @@ var commands = {
 				'notcontains': 'notcontains'
 			};
 
-			switch(is) {
+			switch(operator) {
 
 				case 'equal':
-					if(fromStepData == to) { res.assert = true; }
+					if(fromStepData == expected) { res.assert = true; }
 				break;
 
 				case 'gt':
-					if(fromStepData > to) { res.assert = true; }
+					if(fromStepData > expected) { res.assert = true; }
 				break;
 
 				case 'gte':
-					if(fromStepData >= to) { res.assert = true; }
+					if(fromStepData >= expected) { res.assert = true; }
 				break;
 
 				case 'lt':
-					if(fromStepData < to) { res.assert = true; }
+					if(fromStepData < expected) { res.assert = true; }
 				break;
 
 				case 'lte':
-					if(fromStepData <= to) { res.assert = true; }
+					if(fromStepData <= expected) { res.assert = true; }
 				break;
 
 				case 'null':
@@ -74,16 +74,16 @@ var commands = {
 				break;
 
 				case 'contains':
-					if(fromStepData.indexOf(to) != -1) { res.assert = true; }
+					if(fromStepData.indexOf(expected) != -1) { res.assert = true; }
 				break;
 
 				case 'notcontains':
-					if(fromStepData.indexOf(to) == -1) { res.assert = true; }
+					if(fromStepData.indexOf(expected) == -1) { res.assert = true; }
 				break;
 
 			}
 
-			res.reason.expected = aliases[is] + ' ' + to;
+			res.reason.expected = aliases[operator] + ' ' + expected;
 			res.reason.actual = fromStepData;
 
 			res.reason.message = res.assert ? 'pass' : 'fail';
@@ -468,6 +468,18 @@ var commands = {
 		driver.findElement(webdriver.By.css(selector)).sendKeys(string);
 
 		callback({success: true});
+
+	},
+
+	'setWindow': function(data, step, callback) {
+
+		var handle = data[step].data;
+
+		driver.switchTo().window(handle).then(function success() {
+			callback({success: true});
+		}).then(null, function error() {
+			callback({success: false});
+		});
 
 	}
 
