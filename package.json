@@ -1,0 +1,21 @@
+{
+  "name": "mateserver",
+  "version": "0.0.0",
+  "description": "## Prerequisites",
+  "main": "main.js",
+  "dependencies": {
+    "mongodb": "~1.4.7",
+    "selenium-webdriver": "~2.42.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://azcn2503@bitbucket.org/azcn2503/mateserver.git"
+  },
+  "author": "Aaron Cunnington",
+  "license": "BSD-2-Clause"
+}
