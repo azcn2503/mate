@@ -156,6 +156,32 @@ var commands = {
 
 	},
 
+	'getWindowHandle': function(data, step, callback) {
+
+		driver.getWindowHandle().then( function(handle) {
+			callback({data: handle});
+		});
+
+	},
+
+	'getWindowHandles': function(data, step, callback) {
+
+		driver.getAllWindowHandles().then( function(handles) {
+			callback({data: handles});
+		});
+
+	},
+
+	'acceptAlert': function(data, step, callback) {
+
+		var alert = driver.switchTo().alert();
+		alert.getText().then( function(text) {
+			alert.accept();
+			callback({data: text});
+		});
+
+	},
+
 	'matchEach': function(data, step, callback) {
 
 		var fromStep                = data[step].data.fromStep; // required
