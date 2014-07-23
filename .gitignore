@@ -1,0 +1,4 @@
+commands/save/*
+commands/screenshot/*
+test/*
+node_modules/*

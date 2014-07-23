@@ -11,9 +11,12 @@ var commands = {
 
 		var fromStep     = data[step].data.fromStep || step - 1;
 		var fromIndex    = data[step].data.fromIndex || 0;
-		var operator           = data[step].data.operator || 'equal';
-		var expected           = data[step].data.expected || null;
-		var fromStepData = data[fromStep].result.data[fromIndex] || null;
+		var operator     = data[step].data.operator || 'equal';
+		var expected     = data[step].data.expected || null;
+		var fromStepData = data[fromStep].result.data || null;
+		if(typeof(fromStepData) === 'array' || typeof(fromStepData) === 'object') {
+			fromStepData = fromStepData[fromIndex];
+		}
 
 		var res = {
 			assert: false,
@@ -156,6 +159,14 @@ var commands = {
 
 	},
 
+	'getCurrentURL': function(data, step, callback) {
+
+		driver.getCurrentUrl().then(function success(url) {
+			callback({data: url});
+		});
+
+	},
+
 	'getWindowHandle': function(data, step, callback) {
 
 		driver.getWindowHandle().then(function success(handle) {
@@ -224,17 +235,10 @@ var commands = {
 
 		var url = data[step].data;
 
-		var evalGetUrl = function() {
-			return location.href;
-		};
-
-		driver.get(url);
-		driver.executeScript(evalGetUrl).then( function(actualUrl) {
-			callback({
-				data: {
-					'url': actualUrl
-				}
-			});
+		driver.get(url).then(function success() {
+			callback({success: true});
+		}).then(null, function error() {
+			callback({success: false});
 		});
 
 	},
