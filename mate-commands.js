@@ -286,13 +286,16 @@ var commands = {
 
 	'scrollPageToEnd': function(data, step, callback) {
 
-		var self       = this;
-		var data       = data[step].data || {};
-		var timeout    = data.timeout || 60;
-		var scrolls    = 0;
-		var maxScrolls = data.maxScrolls || null;
-		var maxRetries = data.maxRetries || 5;
-		var startTime  = Math.floor(Date.now() / 1000);
+		var self          = this;
+		var data          = data[step].data || {};
+		var timeout       = data.timeout || 60;
+		var scrolls       = 0;
+		var maxScrolls    = data.maxScrolls || null;
+		var maxRetries    = data.maxRetries || 5;
+		var startTime     = Math.floor(Date.now() / 1000);
+		var prevScrollTop = 0;
+		var tries         = 0;
+		var scrollTop     = 0;
 
 		this.eventEmitter = new events.EventEmitter();
 
@@ -302,9 +305,6 @@ var commands = {
 		};
 
 		this.eventEmitter.on('scroll', function() {
-
-			data.prevScrollTop = data.prevScrollTop || 0;
-			data.tries         = data.tries || 0;
 
 			driver.executeScript(evalScroll).then( function(scrollTop) {
 				self.eventEmitter.emit('processScroll', scrollTop);
@@ -319,26 +319,18 @@ var commands = {
 
 			console.log('Scrolled to ' + scrollTop);
 
-			data.scrollTop = scrollTop;
-
-			if(data.scrollTop == data.prevScrollTop) {
-				data.tries++;
+			if(scrollTop == prevScrollTop) {
+				tries++;
 			}
 			else {
-				data.tries = 0;
+				tries = 0;
 			}
 
-			data.prevScrollTop = scrollTop;
+			prevScrollTop = scrollTop;
 
-			if(maxScrolls && scrolls >= maxScrolls) { // scroll limit exceeded
-				self.eventEmitter.emit('done', scrollTop);
-				return;
-			}
-			else if(maxRetries && data.tries >= maxRetries) { // scroll retry limit exceeded
-				self.eventEmitter.emit('done', scrollTop);
-				return;
-			}
-			else if(processScrollTime - startTime >= timeout) { // hard timeout exceeded
+			if(	(maxScrolls && scrolls >= maxScrolls)
+			|| (maxRetries && tries >= maxRetries)
+			|| (processScrollTime - startTime >= timeout) ) {
 				self.eventEmitter.emit('done', scrollTop);
 				return;
 			}
@@ -352,7 +344,7 @@ var commands = {
 
 		this.eventEmitter.on('done', function(scrollTop) {
 
-			data.prevScrollTop = scrollTop;
+			prevScrollTop = scrollTop;
 			if(callback) { callback({
 				data: {
 					'scrollTop': scrollTop
