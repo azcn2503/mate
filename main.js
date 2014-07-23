@@ -1,9 +1,8 @@
-var db = require('mongodb');
-var events = require('events');
-var fs = require('fs');
+var db       = require('mongodb');
+var events   = require('events');
+var fs       = require('fs');
 var commands = require('./mate-commands').commands;
-
-var args = process.argv;
+var args     = process.argv;
 if(args.length < 3) { process.exit(); }
 
 var Mate = function() {
@@ -16,11 +15,12 @@ var Mate = function() {
 		timer: 0,
 		limit: 5
 	};
-	this.fileName = '';
-	this.data = [];
-	this.step = 0;
+	
+	this.fileName     = '';
+	this.data         = [];
+	this.step         = 0;
 	this.eventEmitter = new events.EventEmitter();
-	this.forceRetry = false;
+	this.forceRetry   = false;
 
 	this.setCampaign = function(campaign) {
 

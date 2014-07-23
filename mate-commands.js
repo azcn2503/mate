@@ -1,9 +1,9 @@
 var webdriver = require('selenium-webdriver');
-var driver = new webdriver.Builder()
-	.withCapabilities(webdriver.Capabilities.phantomjs())
-	.build();
-var events = require('events');
-var fs = require('fs');
+var driver    = new webdriver.Builder().withCapabilities(webdriver.Capabilities.phantomjs()).build();
+var events    = require('events');
+var fs        = require('fs');
+
+driver.manage().timeouts().implicitlyWait(1000);
 
 var commands = {
 
@@ -15,15 +15,22 @@ var commands = {
 		var expected     = data[step].data.expected || null;
 		var fromStepData = data[fromStep].result.data || null;
 		if(typeof(fromStepData) === 'array' || typeof(fromStepData) === 'object') {
-			fromStepData = fromStepData[fromIndex];
+			if(typeof(fromIndex) === 'array' || typeof(fromIndex) === 'object') {
+				for(var i in fromIndex) {
+					fromStepData = fromStepData[fromIndex[i]] || fromStepData;
+				}
+			}
+			else {
+				fromStepData = fromStepData[fromIndex];
+			}
 		}
 
 		var res = {
 			assert: false,
 			reason: {
-				message: '',
-				expected: '',
-				actual: ''
+				message  : '',
+				expected : '',
+				actual   : ''
 			}
 		};
 
@@ -35,15 +42,15 @@ var commands = {
 			}
 
 			var aliases = {
-				'equal': '=',
-				'gt': '>',
-				'gte': '>=',
-				'lt': '<',
-				'lte': '<=',
-				'null': 'null',
-				'notnull': 'notnull',
-				'contains': 'contains',
-				'notcontains': 'notcontains'
+				'equal'       : '=',
+				'gt'          : '>',
+				'gte'         : '>=',
+				'lt'          : '<',
+				'lte'         : '<=',
+				'null'        : 'null',
+				'notnull'     : 'notnull',
+				'contains'    : 'contains',
+				'notcontains' : 'notcontains'
 			};
 
 			switch(operator) {
@@ -370,18 +377,29 @@ var commands = {
 		var evalSelect = function(selector) {
 
 			function getElementEssentials(orig, tmp, level) {
-			    var tmp = tmp || {};
-			    var level = level || 0;
-			    for(var i in orig) {
-			    	if(i == 'selectionDirection' || i == 'selectionEnd' || i == 'selectionStart') { continue; }
-			        if(!orig[i]) { continue; }
-			        if(!i.match(/[a-z]/)) { continue; }
-			        if(typeof(orig[i]) === 'function' || typeof(orig[i]) === 'object' || level > 1) { continue; }
-			        if(typeof(orig[i]) === 'array') { level++; get(orig[i], tmp, level); continue; }
-			        tmp[i] = orig[i];
-			        continue;
-			    }
-			    return tmp;
+				var tmp = tmp || {};
+				var level = level || 0;
+				for (var i in orig) {
+					if (i == 'selectionDirection' || i == 'selectionEnd' || i == 'selectionStart') {
+						continue;
+					}
+					if (!orig[i]) {
+						continue;
+					}
+					if (!i.match(/[a-z]/)) {
+						continue;
+					}
+					if (typeof (orig[i]) === 'function' || level > 0) {
+						continue;
+					}
+					if (typeof (orig[i]) === 'array' || typeof (orig[i]) === 'object') {
+						tmp[i] = getElementEssentials(orig[i], null, level + 1);
+						continue;
+					}
+					tmp[i] = orig[i];
+					continue;
+				}
+				return tmp;
 			}
 
 			var el = document.querySelector(selector);
@@ -415,18 +433,29 @@ var commands = {
 		var evalSelectAll = function(selector) {
 
 			function getElementEssentials(orig, tmp, level) {
-			    var tmp = tmp || {};
-			    var level = level || 0;
-			    for(var i in orig) {
-			    	if(i == 'selectionDirection' || i == 'selectionEnd' || i == 'selectionStart') { continue; }
-			        if(!orig[i]) { continue; }
-			        if(!i.match(/[a-z]/)) { continue; }
-			        if(typeof(orig[i]) === 'function' || typeof(orig[i]) === 'object' || level > 1) { continue; }
-			        if(typeof(orig[i]) === 'array') { level++; get(orig[i], tmp, level); continue; }
-			        tmp[i] = orig[i];
-			        continue;
-			    }
-			    return tmp;
+				var tmp = tmp || {};
+				var level = level || 0;
+				for (var i in orig) {
+					if (i == 'selectionDirection' || i == 'selectionEnd' || i == 'selectionStart') {
+						continue;
+					}
+					if (!orig[i]) {
+						continue;
+					}
+					if (!i.match(/[a-z]/)) {
+						continue;
+					}
+					if (typeof (orig[i]) === 'function' || level > 0) {
+						continue;
+					}
+					if (typeof (orig[i]) === 'array' || typeof (orig[i]) === 'object') {
+						tmp[i] = getElementEssentials(orig[i], null, level + 1);
+						continue;
+					}
+					tmp[i] = orig[i];
+					continue;
+				}
+				return tmp;
 			}
 
 			var els = document.querySelectorAll(selector);
@@ -470,6 +499,16 @@ var commands = {
 		var string = data.string;
 
 		driver.findElement(webdriver.By.css(selector)).sendKeys(string);
+
+		callback({success: true});
+
+	},
+
+	'setImplicitWaitTimeout': function(data, step, callback) {
+
+		var ms = data[step].data || 1000;
+
+		driver.manage().timeouts().implicitlyWait(ms);
 
 		callback({success: true});
 
