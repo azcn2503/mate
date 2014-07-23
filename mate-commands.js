@@ -102,13 +102,13 @@ var commands = {
 
 		driver.findElement(webdriver.By.css(selector)).click();
 
-		callback();
+		callback({success: true});
 
 	},
 
 	'done': function(data, step, callback) {
 
-		callback();
+		callback({success: true});
 
 	},
 
@@ -158,26 +158,35 @@ var commands = {
 
 	'getWindowHandle': function(data, step, callback) {
 
-		driver.getWindowHandle().then( function(handle) {
+		driver.getWindowHandle().then(function success(handle) {
 			callback({data: handle});
+		}).then(null, function error() {
+			callback({success: false});
 		});
 
 	},
 
 	'getWindowHandles': function(data, step, callback) {
 
-		driver.getAllWindowHandles().then( function(handles) {
+		driver.getAllWindowHandles().then(function success(handles) {
 			callback({data: handles});
+		}).then(null, function error() {
+			callback({success: false});
 		});
 
 	},
 
 	'acceptAlert': function(data, step, callback) {
 
-		var alert = driver.switchTo().alert();
-		alert.getText().then( function(text) {
-			alert.accept();
-			callback({data: text});
+		driver.switchTo().alert().then( function success(alert) {
+			alert.getText().then( function success(text) {
+				alert.accept();
+				callback({data: text});
+			}).then(null, function error() {
+				callback({success: false});
+			});
+		}).then(null, function error() {
+			callback({success: false});
 		});
 
 	},
@@ -232,7 +241,7 @@ var commands = {
 
 	'repeat': function(data, step, callback) {
 
-		var repeatStep = data[step].data;
+		var repeatStep    = data[step].data;
 		var repeatCommand = data[repeatStep].command;
 
 		commands[repeatCommand](data, repeatStep, callback);
@@ -277,13 +286,15 @@ var commands = {
 
 	'scrollPageToEnd': function(data, step, callback) {
 
-		var data = data[step].data;
-
-		var self = this;
+		var self       = this;
+		var data       = data[step].data || {};
+		var timeout    = data.timeout || 60;
+		var scrolls    = 0;
+		var maxScrolls = data.maxScrolls || null;
+		var maxRetries = data.maxRetries || 5;
+		var startTime  = Math.floor(Date.now() / 1000);
 
 		this.eventEmitter = new events.EventEmitter();
-
-		var data = data || {};
 
 		var evalScroll = function() {
 			window.scrollTo(0, document.body.scrollHeight);
@@ -293,8 +304,7 @@ var commands = {
 		this.eventEmitter.on('scroll', function() {
 
 			data.prevScrollTop = data.prevScrollTop || 0;
-			data.tries = data.tries || 0;
-			data.tryLimit = data.tryLimit || 5;
+			data.tries         = data.tries || 0;
 
 			driver.executeScript(evalScroll).then( function(scrollTop) {
 				self.eventEmitter.emit('processScroll', scrollTop);
@@ -303,6 +313,9 @@ var commands = {
 		});
 
 		this.eventEmitter.on('processScroll', function(scrollTop) {
+
+			var processScrollTime = Math.floor(Date.now() / 1000);
+			scrolls++;
 
 			console.log('Scrolled to ' + scrollTop);
 
@@ -317,11 +330,19 @@ var commands = {
 
 			data.prevScrollTop = scrollTop;
 
-			if(data.tries >= data.tryLimit) {
+			if(maxScrolls && scrolls >= maxScrolls) { // scroll limit exceeded
 				self.eventEmitter.emit('done', scrollTop);
 				return;
 			}
-			else {
+			else if(maxRetries && data.tries >= maxRetries) { // scroll retry limit exceeded
+				self.eventEmitter.emit('done', scrollTop);
+				return;
+			}
+			else if(processScrollTime - startTime >= timeout) { // hard timeout exceeded
+				self.eventEmitter.emit('done', scrollTop);
+				return;
+			}
+			else { // scroll again if no limits exceeded
 				setTimeout( function() {
 					self.eventEmitter.emit('scroll');
 				}, 1000);
@@ -377,7 +398,7 @@ var commands = {
 
 		};
 
-		driver.findElement(webdriver.By.css(selector)).then( function(el) {
+		driver.findElement(webdriver.By.css(selector)).then( function success(el) {
 
 			driver.executeScript(evalSelect, selector).then( function(nativeEl) {
 				callback({
@@ -385,6 +406,8 @@ var commands = {
 				});
 			});
 
+		}).then(null, function error() {
+			callback({success: false});
 		});
 
 	},
@@ -425,7 +448,7 @@ var commands = {
 
 		};
 
-		driver.findElements(webdriver.By.css(selector)).then( function(els) {
+		driver.findElements(webdriver.By.css(selector)).then( function success(els) {
 
 			driver.executeScript(evalSelectAll, selector).then( function(nativeEls) {
 				callback({
@@ -433,6 +456,8 @@ var commands = {
 				});
 			});
 
+		}).then(null, function error() {
+			callback({success: false});
 		});
 
 	},
@@ -450,7 +475,7 @@ var commands = {
 
 		driver.findElement(webdriver.By.css(selector)).sendKeys(string);
 
-		callback();
+		callback({success: true});
 
 	}
 

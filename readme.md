@@ -196,20 +196,21 @@ Saves a screenshot with an automatically generated filename returned upon comman
 ---
 
 #### scrollPageToEnd
-**data**: { `tryLimit = 5` }
+**data**: { [`timeout = 60`, [`maxScrolls = null`, [`maxRetries = 5`]]] }
 
-Scrolls to the end of the currently loaded webpage. It will allow you to scroll down on infinite loading webpages. There is currently no hard timeout. You can specify a try limit with `tryLimit` that will compare the new scroll position to the old scroll position that number of times before returning.
+Scrolls to the end of the currently loaded webpage. It will allow you to scroll down on infinite loading webpages. You can specify various timeouts and limits: `timeout` defaults to 60 seconds. This is a hard limit for the entire operation, and if exceeded will return the current scroll position. `maxScrolls` is the number of total scrolls it will try, the default is `null` which means there is no limit. `maxRetries` defaults to 5, it is compared when the new scroll position after processing a scroll matches the old scroll position - it generally means that you have reached the end of an infinitely-scrolling page, but could possibly be a network timeout.
 
 Example:
 
     {
         "command": "scrollPageToEnd",
         "data": { 
-            "tryLimit": 3
+            "timeout": 180,
+            "maxRetries": null
         }
     }
     
-Will try to scroll three times past the end of the page before returning results.
+Will try to scroll infinitely for three minutes without exception.
 
 ---
 
