@@ -32,10 +32,10 @@ var Mate = function() {
 
 	this.exec = function() {
 
-		self.eventEmitter.on('save', function() {
+		self.eventEmitter.on('save', function(fileName) {
 
 			var content = JSON.stringify(self.data, null, '\t');
-			var fileName = self.campaign.id + '-' + Date.now() + Math.random().toString().replace(/\./, '0') + '.json';
+			var fileName = fileName || self.campaign.id + '-' + Date.now() + Math.random().toString().replace(/\./, '0') + '.json';
 
 			fs.writeFileSync(fileName, content, {'encoding': 'utf-8'});
 
@@ -118,7 +118,7 @@ var Mate = function() {
 			//self.eventEmitter.emit('save');
 			
 			if(self.data[self.step].command == 'done') {
-				self.eventEmitter.emit('done');
+				self.eventEmitter.emit('done', res);
 				return;
 			}
 			
@@ -126,9 +126,11 @@ var Mate = function() {
 
 		});
 
-		self.eventEmitter.on('done', function() {
+		self.eventEmitter.on('done', function(res) {
 
-			self.eventEmitter.emit('save');
+			res.fileName = res.fileName || '';
+
+			self.eventEmitter.emit('save', res.fileName);
 			self.campaign.complete = true;
 
 		});

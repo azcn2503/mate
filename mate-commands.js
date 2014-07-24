@@ -137,7 +137,12 @@ var commands = {
 
 	'done': function(data, step, callback) {
 
-		callback({success: true});
+		var fileName = data[step].data || '';
+		if(fileName != '') {
+			if(!/\.json$/.test(fileName)) { fileName += '.json'; }
+		}
+
+		callback({fileName: fileName, success: true});
 
 	},
 
