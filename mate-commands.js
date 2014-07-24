@@ -21,7 +21,10 @@ var commands = {
 					fromStepData = fromStepData[fromIndex[i]] || fromStepData;
 				}
 			}
-			if(fromIndex == '*' || !fromIndex) {
+			else if(typeof(fromIndex) === 'number' || typeof(fromIndex) === 'string') {
+				fromStepData = fromStepData[fromIndex];
+			}
+			else if(fromIndex == '*' || !fromIndex) {
 				fromIndex = 0;
 				recurse = true;
 			}
@@ -162,19 +165,43 @@ var commands = {
 		var attributeName           = data[step].data.attributeName; // required
 		var matchingExpression      = data[step].data.matchingExpression || null;
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
+		var kvp                     = data[step].data.kvp || null;
+		var returnType              = data[step].data.returnType || 'array';
 		var fromStepData            = data[fromStep].result.data;
 		//if(typeof(fromStepData) === 'object') { fromStepData = [fromStepData]; }
 
-		var res = [];
+		var res = returnType == 'array' ? [] : {};
+		kvp = returnType == 'array' ? false : kvp;
 
+		var count = 0;
+		var kvpK = kvpV = tmp = null;
 		for(var i in fromStepData) {
 			if(fromStepData[i][attributeName]) {
 				if(matchingExpression) {
 					var re = new RegExp(matchingExpression, matchingExpressionFlags);
 					if(!re.test(fromStepData[i][attributeName])) { continue; }
 				}
-				res.push(fromStepData[i][attributeName]);
+				if(kvp) {
+					if(count % 2 == 0) {
+						kvpK = fromStepData[i][attributeName];
+					}
+					else {
+						kvpV = fromStepData[i][attributeName];
+						if(returnType == 'array') {
+							tmp = {};
+							tmp[kvpK] = kvpV;
+							res.push(tmp);
+						}
+						else {
+							res[kvpK] = kvpV;
+						}
+					}
+				}
+				else {
+					res.push(fromStepData[i][attributeName]);
+				}
 			}
+			count++;
 		}
 
 		callback({data: res});
