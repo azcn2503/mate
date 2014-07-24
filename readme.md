@@ -52,11 +52,11 @@ You can process it by running:
 #### assert
 **data**: {`fromStep`, `fromIndex`, `operator`, `expected`}
 
-Assert that the data from step `fromStep[fromIndex]` matches the `expected` value compared by the `operator`.
+Assert that the data from step `fromStep[fromIndex]` matches the `expected` value compared by the `operator`. If `fromIndex` is not specified, it will assume that either you are asserting a non-array or non-object data set and assert a string, number, boolean etc., or, if the data set is an array or an object then it will iterate the entire array until it finds a match, and will return the index it matched at. You can force this setting by providing `*` as the `fromIndex` value. `fromIndex` can also be an array of keys so that you can assert many levels within a data set.
 
-`operator` can be one of the following: `equal` compares if they are the same, `gt` compares if the actual is greater than the expected, `gte` compares if the actual is greater than or equal to the expected, `lt` compares if the actual is less than the expected, `lte` compares if the actual is less than or equal to the expected, `null` compares if the actual is null, `notnull` compares if the actual is not null, `contains` compares if the actual contains the expected value, `notcontains` compares if the actual does not contain the expected value.
+`operator` can be one of the following: `equal` compares if they are the same, `gt` compares if the actual is greater than the expected, `gte` compares if the actual is greater than or equal to the expected, `lt` compares if the actual is less than the expected, `lte` compares if the actual is less than or equal to the expected, `null` compares if the actual is null, `notnull` compares if the actual is not null, `contains` compares if the actual contains the expected value, `notcontains` compares if the actual does not contain the expected value, `inrange` checks if the data is within the range specified (use a string like "1-2" or "3-7")
 
-Example:
+Example 1:
 
     {
         "command": "assert",
@@ -70,7 +70,29 @@ Example:
 
 Will assert that the data from step 1 at index 0 (first entry in the array) is equal to `anjunabeats`. 
 
-Returns: { 'assert': bool, 'reason': { 'message': string, 'expected': string, 'actual': string } }
+Example 2:
+
+    {
+        "command": "assert",
+        "data": {
+            "fromStep": 1,
+            "operator": "contains",
+            "expected": "mywebsitename.com"
+        }
+    },
+    {
+        "command": "assert",
+        "data": {
+            "fromStep": 2,
+            "fromIndex": ["reason", "index"],
+            "operator": "inrange",
+            "expected": "0-2"
+        }
+    }
+
+Might be used in Google search results to assert that data gathered from a previous step contains your website address. The second assertion verifies that the result is in the top three. Asserting assertions is OK!
+
+Returns: { 'assert': bool, 'reason': { 'message': string, 'expected': string, 'actual': string, 'index': mixed } }
 
 ---
 
