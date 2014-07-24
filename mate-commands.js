@@ -10,7 +10,8 @@ var commands = {
 	'assert': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep || step - 1;
-		var fromIndex    = data[step].data.fromIndex || 0;
+		var fromIndex    = data[step].data.fromIndex || null;
+		var recurse      = false;
 		var operator     = data[step].data.operator || 'equal';
 		var expected     = data[step].data.expected || null;
 		var fromStepData = data[fromStep].result.data || null;
@@ -20,8 +21,9 @@ var commands = {
 					fromStepData = fromStepData[fromIndex[i]] || fromStepData;
 				}
 			}
-			else {
-				fromStepData = fromStepData[fromIndex];
+			if(fromIndex == '*' || !fromIndex) {
+				fromIndex = 0;
+				recurse = true;
 			}
 		}
 
@@ -30,77 +32,90 @@ var commands = {
 			reason: {
 				message  : '',
 				expected : '',
-				actual   : ''
+				actual   : '',
+				index    : null
 			}
 		};
 
-		while(1) {
+		var aliases = {
+			'equal'       : '=',
+			'gt'          : '>',
+			'gte'         : '>=',
+			'lt'          : '<',
+			'lte'         : '<=',
+			'null'        : 'null',
+			'notnull'     : 'not null',
+			'contains'    : 'contains',
+			'notcontains' : 'does not contain',
+			'inrange'     : 'is between'
+		};
 
-			if(expected == null || fromStepData == null) {
+		var tmpData = null;
+
+		do {
+
+			var tmpData = recurse ? fromStepData[fromIndex] : fromStepData;
+
+			if(expected == null || tmpData == null) {
 				res = false;
 				break;
 			}
 
-			var aliases = {
-				'equal'       : '=',
-				'gt'          : '>',
-				'gte'         : '>=',
-				'lt'          : '<',
-				'lte'         : '<=',
-				'null'        : 'null',
-				'notnull'     : 'notnull',
-				'contains'    : 'contains',
-				'notcontains' : 'notcontains'
-			};
-
 			switch(operator) {
 
 				case 'equal':
-					if(fromStepData == expected) { res.assert = true; }
+					if(tmpData == expected) { res.assert = true; }
 				break;
 
 				case 'gt':
-					if(fromStepData > expected) { res.assert = true; }
+					if(tmpData > expected) { res.assert = true; }
 				break;
 
 				case 'gte':
-					if(fromStepData >= expected) { res.assert = true; }
+					if(tmpData >= expected) { res.assert = true; }
 				break;
 
 				case 'lt':
-					if(fromStepData < expected) { res.assert = true; }
+					if(tmpData < expected) { res.assert = true; }
 				break;
 
 				case 'lte':
-					if(fromStepData <= expected) { res.assert = true; }
+					if(tmpData <= expected) { res.assert = true; }
 				break;
 
 				case 'null':
-					if(fromStepData === null) { res.assert = true; }
+					if(tmpData === null) { res.assert = true; }
 				break;
 
 				case 'notnull':
-					if(fromStepData !== null) { res.assert = true; }
+					if(tmpData !== null) { res.assert = true; }
 				break;
 
 				case 'contains':
-					if(fromStepData.indexOf(expected) != -1) { res.assert = true; }
+					if(tmpData.indexOf(expected) != -1) { res.assert = true; }
 				break;
 
 				case 'notcontains':
-					if(fromStepData.indexOf(expected) == -1) { res.assert = true; }
+					if(tmpData.indexOf(expected) == -1) { res.assert = true; }
+				break;
+
+				case 'inrange':
+					var range = expected.split('-');
+					var lower = parseInt(range[0]);
+					var upper = parseInt(range[1]);
+					if(tmpData >= lower && tmpData <= upper) { res.assert = true; }
 				break;
 
 			}
 
 			res.reason.expected = aliases[operator] + ' ' + expected;
-			res.reason.actual = fromStepData;
+			res.reason.actual   = tmpData;
+			res.reason.message  = res.assert ? 'pass' : 'fail';
+			res.reason.index    = fromIndex;
 
-			res.reason.message = res.assert ? 'pass' : 'fail';
+			fromIndex++;
 
-			break;
-
-		}
+		} while(!res.assert && recurse && fromIndex < fromStepData.length - 1);
 
 		callback({data: res});
 
@@ -372,7 +387,12 @@ var commands = {
 
 	'select': function(data, step, callback) {
 
-		var selector = data[step].data;
+		var selector = data[step].data || 'body';
+		var details = true;
+		if(typeof(selector) === 'object') {
+			selector = selector.selector || 'body';
+			details = selector.details || true;
+		}
 
 		var evalSelect = function(selector) {
 
@@ -414,11 +434,23 @@ var commands = {
 
 		driver.findElement(webdriver.By.css(selector)).then( function success(el) {
 
-			driver.executeScript(evalSelect, selector).then( function(nativeEl) {
-				callback({
-					data: JSON.parse(nativeEl)
+			if(details) {
+
+				driver.executeScript(evalSelect, selector).then( function success(nativeEl) {
+					callback({
+						data: JSON.parse(nativeEl)
+					});
+				}).then(null, function error() {
+					callback({success: false});
 				});
-			});
+
+			}
+
+			else {
+
+				callback({success: true});
+
+			}
 
 		}).then(null, function error() {
 			callback({success: false});
@@ -428,7 +460,12 @@ var commands = {
 
 	'selectAll': function(data, step, callback) {
 
-		var selector = data[step].data;
+		var selector = data[step].data || 'body';
+		var details = true;
+		if(typeof(selector) === 'object') {
+			selector = selector.selector || 'body';
+			details = selector.details || true;
+		}
 
 		var evalSelectAll = function(selector) {
 
@@ -475,11 +512,23 @@ var commands = {
 
 		driver.findElements(webdriver.By.css(selector)).then( function success(els) {
 
-			driver.executeScript(evalSelectAll, selector).then( function(nativeEls) {
-				callback({
-					data: JSON.parse(nativeEls)
+			if(details) {
+
+				driver.executeScript(evalSelectAll, selector).then( function success(nativeEls) {
+					callback({
+						data: JSON.parse(nativeEls)
+					});
+				}).then(null, function error() {
+					callback({success: false})
 				});
-			});
+
+			}
+
+			else{
+
+				callback({success: true});
+
+			}
 
 		}).then(null, function error() {
 			callback({success: false});
@@ -519,6 +568,23 @@ var commands = {
 		var handle = data[step].data;
 
 		driver.switchTo().window(handle).then(function success() {
+			callback({success: true});
+		}).then(null, function error() {
+			callback({success: false});
+		});
+
+	},
+
+	'submitForm': function(data, step, callback) {
+
+		var selector = data[step].data || 'form';
+
+		var evalSubmit = function(selector) {
+			document.querySelector(selector).submit();
+			return true;
+		};
+
+		driver.executeScript(submitForm, selector).then(function success() {
 			callback({success: true});
 		}).then(null, function error() {
 			callback({success: false});
