@@ -137,7 +137,9 @@ var commands = {
 
 	'done': function(data, step, callback) {
 
-		var fileName = data[step].data || '';
+		// _id is the campaign ID passed from processCommand
+
+		var fileName = data[step].data || data[step]._id;
 		if(fileName != '') {
 			if(!/\.json$/.test(fileName)) { fileName += '.json'; }
 		}

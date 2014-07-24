@@ -74,6 +74,9 @@ var Mate = function() {
 				'start': Date.now(),
 				'end': null
 			};
+			if(self.data[self.step].command == 'done') {
+				self.data[self.step]._id = self.campaign.id;
+			}
 
 			//self.eventEmitter.emit('save');
 			
@@ -82,10 +85,12 @@ var Mate = function() {
 			if(self.data[self.step].description) {
 				console.log('Description: ', self.data[self.step].description);
 			}
+
 			if(!commands[self.data[self.step].command]) {
 				self.eventEmitter.emit('processNextCommand', 'Command `' + self.data[self.step].command + '` does not exist');
 				return;
 			};
+
 			commands[self.data[self.step].command](self.data, self.step, function(res) {
 				self.eventEmitter.emit('commandProcessed', res);
 			});
