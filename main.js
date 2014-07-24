@@ -80,11 +80,11 @@ var Mate = function() {
 
 			//self.eventEmitter.emit('save');
 			
-			console.log('Command:     ', self.data[self.step].command);
-			console.log('Data:        ', self.data[self.step].data);
 			if(self.data[self.step].description) {
 				console.log('Description: ', self.data[self.step].description);
 			}
+			console.log('Command:     ', self.data[self.step].command);
+			console.log('Data:        ', self.data[self.step].data);
 
 			if(!commands[self.data[self.step].command]) {
 				self.eventEmitter.emit('processNextCommand', 'Command `' + self.data[self.step].command + '` does not exist');
@@ -113,14 +113,19 @@ var Mate = function() {
 
 			res = res || {};
 
-			console.log(res);
-			console.log('\n---\n');
-
 			self.data[self.step].waiting = false;
 			self.data[self.step].processed = true;
 			self.data[self.step].result = res;
 			self.data[self.step].performance.end = Date.now();
 			//self.eventEmitter.emit('save');
+
+			var time = self.data[self.step].performance.end - self.data[self.step].performance.start;
+
+			console.log('Time taken:   ' + time + 'ms');
+
+			console.log(res);
+
+			console.log('\n---\n');
 			
 			if(self.data[self.step].command == 'done') {
 				self.eventEmitter.emit('done', res);

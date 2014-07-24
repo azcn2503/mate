@@ -317,8 +317,6 @@ var commands = {
 		var fileType     = data[step].data.fileType || 'json';
 		var fromStepData = data[fromStep].result.data;
 		if(typeof(fromStepData) === 'array' || typeof(fromStepData) === 'object') {
-			console.log('fromStepData is an array or object');
-			console.log('fromIndex is ', fromIndex);
 			if(typeof(fromIndex) === 'array' || typeof(fromIndex) === 'object') {
 				for(var i in fromIndex) {
 					fromStepData = fromStepData[fromIndex[i]] || fromStepData;
