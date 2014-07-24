@@ -77,8 +77,11 @@ var Mate = function() {
 
 			//self.eventEmitter.emit('save');
 			
-			console.log('Command: ', self.data[self.step].command);
-			console.log('Data:    ', self.data[self.step].data);
+			console.log('Command:     ', self.data[self.step].command);
+			console.log('Data:        ', self.data[self.step].data);
+			if(self.data[self.step].description) {
+				console.log('Description: ', self.data[self.step].description);
+			}
 			if(!commands[self.data[self.step].command]) {
 				self.eventEmitter.emit('processNextCommand', 'Command `' + self.data[self.step].command + '` does not exist');
 				return;
@@ -151,8 +154,8 @@ if(args[3] && args[3] == 'force') { mate.forceRetry = true; }
 for(i = 3; i < args.length; i++) {
 	if(!args[i] || args[i].indexOf('--') == -1) { break; }
 	var kvp = args[i].match(/--(.+)?=(.+)/);
-	var k = kvp[1].trim();
-	var v = kvp[2].trim();
+	var k = kvp[1].replace(/[\"\=]/g, '').trim();
+	var v = kvp[2].replace(/[\"\=]/g, '').trim();
 	mate.args[k] = v;
 }
 mate.exec();

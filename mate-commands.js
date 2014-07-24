@@ -15,16 +15,17 @@ var commands = {
 		var operator     = data[step].data.operator || 'equal';
 		var expected     = data[step].data.expected || null;
 		var fromStepData = data[fromStep].result.data || null;
+
 		if(typeof(fromStepData) === 'array' || typeof(fromStepData) === 'object') {
 			if(typeof(fromIndex) === 'array' || typeof(fromIndex) === 'object') {
 				for(var i in fromIndex) {
-					fromStepData = fromStepData[fromIndex[i]] || fromStepData;
+					fromStepData = fromStepData[fromIndex[i]];
 				}
 			}
-			else if(typeof(fromIndex) === 'number' || typeof(fromIndex) === 'string') {
+			if(typeof(fromIndex) === 'number' || typeof(fromIndex) === 'string' && fromIndex != '*') {
 				fromStepData = fromStepData[fromIndex];
 			}
-			else if(fromIndex == '*' || !fromIndex) {
+			if(!fromIndex || fromIndex == '*') {
 				fromIndex = 0;
 				recurse = true;
 			}
