@@ -22,6 +22,8 @@ var Mate = function() {
 	this.eventEmitter = new events.EventEmitter();
 	this.forceRetry   = false;
 
+	this.args = {};
+
 	this.setCampaign = function(campaign) {
 
 		self.campaign.id = campaign;
@@ -32,7 +34,10 @@ var Mate = function() {
 
 		self.eventEmitter.on('save', function() {
 
-			fs.writeFileSync(self.fileName, JSON.stringify(self.data, null, '\t'), {'encoding': 'utf-8'});
+			var content = JSON.stringify(self.data, null, '\t');
+			var fileName = self.campaign.id + '-' + Date.now() + Math.random().toString().replace(/\./, '0') + '.json';
+
+			fs.writeFileSync(fileName, content, {'encoding': 'utf-8'});
 
 		});
 
@@ -40,6 +45,15 @@ var Mate = function() {
 
 			self.fileName = self.campaign.id + '.json';
 			var content = fs.readFileSync(self.fileName, {'encoding': 'utf-8'});
+
+			// Use mustache style replacements in the control file
+			if(Object.keys(self.args).length != 0) {
+				for(var i in self.args) {
+					var regexp = new RegExp('{{args\.' + i + '}}', 'g');
+					content = content.replace(regexp, self.args[i]);
+				}
+			}
+
 			self.data = JSON.parse(content);
 			self.step = 0;
 			self.eventEmitter.emit('processCommand');
@@ -61,7 +75,7 @@ var Mate = function() {
 				'end': null
 			};
 
-			self.eventEmitter.emit('save');
+			//self.eventEmitter.emit('save');
 			
 			console.log('Command: ', self.data[self.step].command);
 			console.log('Data:    ', self.data[self.step].data);
@@ -98,7 +112,7 @@ var Mate = function() {
 			self.data[self.step].processed = true;
 			self.data[self.step].result = res;
 			self.data[self.step].performance.end = Date.now();
-			self.eventEmitter.emit('save');
+			//self.eventEmitter.emit('save');
 			
 			if(self.data[self.step].command == 'done') {
 				self.eventEmitter.emit('done');
@@ -111,6 +125,7 @@ var Mate = function() {
 
 		self.eventEmitter.on('done', function() {
 
+			self.eventEmitter.emit('save');
 			self.campaign.complete = true;
 
 		});
@@ -133,6 +148,13 @@ var Mate = function() {
 var mate = new Mate();
 mate.setCampaign(args[2]);
 if(args[3] && args[3] == 'force') { mate.forceRetry = true; }
+for(i = 3; i < args.length; i++) {
+	if(!args[i] || args[i].indexOf('--') == -1) { break; }
+	var kvp = args[i].match(/--(.+)?=(.+)/);
+	var k = kvp[1].trim();
+	var v = kvp[2].trim();
+	mate.args[k] = v;
+}
 mate.exec();
 
 (function wait() {
