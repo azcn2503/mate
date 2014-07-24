@@ -10,7 +10,7 @@ var commands = {
 	'assert': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep || step - 1;
-		var fromIndex    = data[step].data.fromIndex || null;
+		var fromIndex    = data[step].data.fromIndex || 0;
 		var recurse      = false;
 		var operator     = data[step].data.operator || 'equal';
 		var expected     = data[step].data.expected || null;
@@ -277,10 +277,30 @@ var commands = {
 	'save': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep;
-		var fileName     = data[step].data.fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0') + '.json';
+		var fromIndex    = data[step].data.fromIndex || 0;
+		var fileName     = data[step].data.fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0');
+		var fileType     = data[step].data.fileType || 'json';
 		var fromStepData = data[fromStep].result.data;
+		if(typeof(fromStepData) === 'array' || typeof(fromStepData) === 'object') {
+			console.log('fromStepData is an array or object');
+			console.log('fromIndex is ', fromIndex);
+			if(typeof(fromIndex) === 'array' || typeof(fromIndex) === 'object') {
+				for(var i in fromIndex) {
+					fromStepData = fromStepData[fromIndex[i]] || fromStepData;
+				}
+			}
+			else {
+				if(fileType != 'json') {
+					fromStepData = fromStepData[fromIndex];
+				}
+			}
+		}
 
-		fileName = 'commands/save/' + fileName;
+		fileName = 'commands/save/' + fileName + '.' + fileType;
+
+		var saveData = '';
+		if(fileType == 'json') { saveData = JSON.stringify(fromStepData); }
+		else { saveData = fromStepData; }
 
 		fs.writeFileSync(fileName, JSON.stringify(fromStepData), {'encoding': 'utf-8'});
 
