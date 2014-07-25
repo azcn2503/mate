@@ -643,6 +643,186 @@ var commands = {
 			callback({success: false});
 		});
 
+	},
+
+	'suggestSelector': function(data, step, callback) {
+
+		var selector = data[step].data;
+
+		var evalSuggest = function(selector) {
+
+			selector = selector || '*';
+			var self = this;
+			this.getClasses = function(selector, classHint) {
+				classHint = classHint || '';
+				var lastClassHint = classHint.substr(classHint.lastIndexOf('.') + 1);
+				classHint = classHint.replace(/\.$/, '');
+				var classHintRegex = new RegExp('^' + classHint.replace(/\./, ''));
+				var res = {};
+				var els = document.querySelectorAll(selector + classHint);
+				if (els.length == 0) {
+					els = document.querySelectorAll(selector);
+				}
+				var classNames = [];
+				for (var i in els) {
+					classNames = els[i].className;
+					if (!classNames) {
+						continue;
+					}
+					classNames = classNames.split(' ');
+					for (var i in classNames) {
+						if (classHintRegex.test(classNames[i])) {
+							res[classNames[i]] = true;
+						}
+						if (lastClassHint == '') {
+							res[classNames[i]] = true;
+						}
+					}
+				}
+				return res;
+			};
+			this.getIds = function(selector, idHint) {
+				idHint = idHint || '';
+				var idHintRegex = new RegExp('^' + idHint);
+				var res = {};
+				var els = document.querySelectorAll(selector);
+				var id = null;
+				for (var i in els) {
+					id = els[i].id || null;
+					if (!id) {
+						continue;
+					}
+					if (idHintRegex.test(id)) {
+						res[id] = true;
+					}
+				}
+				return res;
+			};
+			this.getInnerTags = function(selector) {
+				var res = {};
+				if (selector.charAt(selector.length - 1) == '>') {
+					selector += '*';
+				}
+				var innerTagName = selector.substr(selector.lastIndexOf('>') + 1);
+				var innerTagNameRegex = tagName == '*' ? null : new RegExp('^' + innerTagName, 'i');
+				els = document.querySelectorAll(selector);
+				if (els.length == 0) {
+					selector = selector.substr(0, selector.lastIndexOf('>')) + '>*';
+					els = document.querySelectorAll(selector);
+				}
+				for (var i in els) {
+					if (!els[i].tagName) {
+						continue;
+					}
+					if (innerTagName == '*') {
+						res[els[i].tagName] = true;
+						continue;
+					}
+					if (innerTagNameRegex.test(els[i].tagName)) {
+						res[els[i].tagName] = true;
+					}
+				}
+				return res;
+			};
+			this.getLastType = function(obj) {
+				var key = '';
+				var highest = -1;
+				for (var i in obj) {
+					if (obj[i] > highest) {
+						highest = obj[i];
+						key = i;
+					}
+				}
+				return key;
+			};
+			var res = {
+				tags: {},
+				classes: {},
+				ids: {}
+			}
+			var lastTypePositions = {
+				dot: selector.lastIndexOf('.'),
+				hash: selector.lastIndexOf('#'),
+				arrow: selector.lastIndexOf('>')
+			}
+			var lastType = getLastType(lastTypePositions);
+			var lookingFor = 'tag';
+			if (lastType == 'dot') {
+				lookingFor = 'class';
+			}
+			if (lastType == 'hash') {
+				lookingFor = 'id';
+			}
+			if (lastType == 'arrow') {
+				lookingFor = 'innerTag';
+			}
+			var selector = selector.replace(/( )*>\1*/g, '>').split(' ');
+			var selectorString = '';
+			var els = null;
+			for (var i in selector) {
+				if (i < selector.length - 1) {
+					selectorString += selector[i] + ' ';
+					continue;
+				}
+				var tagName = selector[i].match(/^[a-z0-9>*]+/i);
+				tagName = !tagName ? '*' : tagName[0];
+				var tagNameRegex = tagName == '*' ? null : new RegExp('^' + tagName, 'i');
+				var classString = selector[i].match(/\.[a-z0-9\-_.]+/i);
+				classString = !classString ? '' : classString[0];
+				var id = selector[i].match(/#[a-z0-9\-_]+/i);
+				id = !id ? '' : id[0];
+				if (lookingFor == 'tag') {
+					els = document.querySelectorAll(selectorString + tagName);
+					if (els.length == 0) {
+						els = document.querySelectorAll('*');
+					}
+					var tmp = {};
+					for (var i in els) {
+						if (!els[i].tagName) {
+							continue;
+						}
+						tmp[els[i].tagName] = true;
+					}
+					if (Object.keys(tmp).length == 1) {
+						els = document.querySelectorAll('*');
+					}
+					for (var i in els) {
+						if (!els[i].tagName) {
+							continue;
+						}
+						if (tagName == '*') {
+							res.tags[els[i].tagName] = true;
+							continue;
+						}
+						if (tagNameRegex.test(els[i].tagName)) {
+							res.tags[els[i].tagName] = true;
+						}
+					}
+				}
+				if (lookingFor == 'class') {
+					var classes = self.getClasses(tagName, classString);
+					res.classes = classes;
+				}
+				if (lookingFor == 'id') {
+					var id = selector[selector.length - 1].split('#')[1];
+					var ids = self.getIds(tagName, id);
+					res.ids = ids;
+				}
+				if (lookingFor == 'innerTag') {
+					var tags = self.getInnerTags(tagName);
+					res.tags = tags;
+				}
+			}
+			return res;
+
+		};
+
+		driver.executeScript(evalSuggest, selector).then(function success(success) {
+			callback({success: true, data: success});
+		}).then(null, function error() {
+			callback({success: false});
+		});
+
 	}
 
 };
