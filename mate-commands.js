@@ -649,36 +649,170 @@ var commands = {
 
 		var selector = data[step].data;
 
-		var evalSuggest = function(selector) {
+		var evalSuggest = function(selector, mode, inContext) {
 
-			var tagString = selector.match(/^[a-z0-9>*]+/i);
+			var self = this;
+
+			this.returnNodes = function(nodes) {
+
+				if (self.mode == 'native') {
+					// Return an array of native elements
+					var arr = [];
+					for (var i in nodes) {
+						if (typeof(nodes[i]) !== 'object') {
+							continue;
+						}
+						arr.push(nodes[i]);
+					}
+					return arr;
+				}
+
+				if (self.mode == 'array' || self.mode == 'object') {
+					var obj = {};
+					for (var i in nodes) {
+						if (!nodes[i] || !nodes[i].tagName) {
+							continue;
+						}
+						var tagString = self.inContext ? self.context == 'tag' ? nodes[i].tagName : '' : nodes[i].tagName;
+						var id = self.inContext ? self.context == 'id' ? nodes[i].id : '' : nodes[i].id;
+						id = id ? '#' + id : id;
+						var classString = '';
+						if (self.inContext && self.context == 'class') {
+							var classes = nodes[i].className.split(' ');
+							for (var i in classes) {
+								if (classes[i] == '') {
+									continue;
+								}
+								classString += '.' + classes[i];
+							}
+						}
+						var selector = tagString + id + classString;
+						obj[selector] = true;
+					}
+					if (self.mode == 'object') {
+						return obj;
+					} // Return a simple object of selectors
+					var arr = [];
+					for (var i in obj) {
+						arr.push(i);
+					}
+					return arr; // Return a simple array of selectors
+				}
+
+			}
+
+			this.mode = mode || 'native';
+			this.inContext = inContext || false;
+			this.context = 'tag';
+			var tagHint = null;
+
+			var contexts = {
+				'#': 'id',
+				'.': 'class'
+			};
+
+			// tags
+			var tagString = selector.replace(/\[.+?\]/g, '').replace(/( )*\>\1*/g, '>').match(/^[a-z0-9> *]+/i);
 			tagString = tagString ? tagString[0] : '*';
+			//console.log('tagString', tagString);
 
+			// classes
 			var classString = selector.match(/\.[a-z0-9\-_.]*/i);
 			classString = classString ? classString[0] : '';
 			classArr = classString.split('.');
 			classString = '';
-			for(var i in classArr) {
-				if(i == 0) { continue; }
-				if(classArr[i] == '') { classString += '[class]'; continue; }
-				classString += '[class^=' + classArr[i] + ']';
+			for (var i in classArr) {
+				if (i == 0) {
+					continue;
+				}
+				if (classArr[i] == '') {
+					classString += '[class]';
+					continue;
+				}
+				classString += '[class*=' + classArr[i] + ']';
 			}
 
+			// ids
 			var idString = selector.match(/#[a-z0-9\-_]*/i);
 			idString = idString ? idString[0] : '';
-			if(/^#$/.test(idString)) { idString = '[id]'; }
-			if(/#[a-z0-9\-_]/.test(idString)) { idString = '[id^=' + idString.replace(/#/, '') + ']'; }
+			if (/^#$/.test(idString)) {
+				idString = '[id]';
+			}
+			if (/#[a-z0-9\-_]/.test(idString)) {
+				idString = '[id*=' + idString.replace(/#/, '') + ']';
+			}
 
+			// get context
+			var lastSeparator = selector.match(/([> #.])(?=[^> #.]*$)/);
+			if (lastSeparator && this.inContext) {
+				lastSeparator = lastSeparator[0];
+				if (contexts[lastSeparator]) {
+					this.context = contexts[lastSeparator];
+				}
+			}
+
+			// work out where the separators are
+			var pos = 0;
+			var tagSeparators = [];
+			for (var i in tagString) {
+				if (tagString.charAt(i).match(/[> ]/)) {
+					tagSeparators.push(tagString.charAt(i));
+				}
+			}
+			//console.log('tagSeparators', tagSeparators);
+
+			// split the tag in to segments from the separators
+			var tagSegments = tagString.split(/[> ]/);
+			//console.log('tagSegments', tagSegments);
+
+			// find out if each of those segments exists and make it a wildcard if it does not
+			for (var i in tagSegments) {
+				if (tagHint) {
+					tagSegments[i] = '';
+					continue;
+				}
+				tagSegments[i] = tagSegments[i].trim();
+				tagSegments[i] = tagSegments[i] == '' ? '*' : tagSegments[i];
+				if (!document.querySelector(tagSegments[i])) {
+					tagHint = tagSegments[i];
+					tagSegments[i] = '*';
+				}
+				if (tagSeparators[i]) {
+					tagSegments[i] += tagSeparators[i];
+				}
+			}
+			tagString = tagSegments.join('');
+
+			// generate the new selector query
 			var newSelector = tagString + idString + classString;
+			console.log('selector', selector);
+			console.log('newSelector', newSelector);
 
-			var els = document.querySelectorAll(newSelector);
+			// execute the query on the current page
+			var nodes = document.querySelectorAll(newSelector);
 
-			return newSelector; // temporary
-			//return els;
+			// if there is no invalid tag, just return this data...
+			if (!tagHint) {
+				return this.returnNodes(nodes);
+			}
+
+			// ...otherwise return tags that match the tag hint
+			var tagHintRegex = new RegExp('^' + tagHint, 'i');
+			//console.log('tagHintRegex', tagHintRegex);
+			var els = [];
+			for (var i in nodes) {
+				if (!nodes[i] || !nodes[i].tagName) {
+					continue;
+				}
+				if (tagHintRegex.test(nodes[i].tagName)) {
+					els.push(nodes[i]);
+				}
+			}
+			return this.returnNodes(els);
 
 		}
 
-		driver.executeScript(evalSuggest, selector).then(function success(success) {
+		driver.executeScript(evalSuggest, selector, 'array').then(function success(success) {
 			callback({success: true, data: success});
 		}).then(null, function error() {
 			callback({success: false});
