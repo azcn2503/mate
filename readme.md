@@ -137,9 +137,9 @@ This will return only those attribute values that match the expression `[^/]*$`
 ---
 
 #### getAttributeValues
-**data**: { `fromStep`, `attributeName`, [`matchingExpression = null`, [`matchingExpressionFlags = ''`]] }
+**data**: { `fromStep int`, `attributeName mixed`, [`matchingExpression string = null`, [`matchingExpressionFlags string = ''`]] }
 
-Returns attribute values from the step defined by `fromStep`. You can optionally specify a regular expression to match against using `matchingExpression`, and provide flags with `matchingExpressionFlags`.
+Returns attribute values from attribute names from the step defined by `fromStep`. `attributeNames` can be a string, or an array of strings. You can optionally specify a regular expression to match against using `matchingExpression`, and provide flags with `matchingExpressionFlags`. If you wish to match different attribute values (when you have specified an array of attribute names) then you can adjust your regular expression accordingly.
 
 Example:
 
@@ -154,6 +154,18 @@ Example:
     }
     
 This will return all the innerHTML attribute values that match the regular expression `/Anjunadeep/i`
+
+Example:
+
+    {
+        "command": "getAttributeValues",
+        "data": {
+            "fromStep": 1,
+            "attributeName": ["innerHTML", "innerText"]
+        }
+    }
+
+This will retrurn all the innerHTML and innerText values.
 
 ---
 
@@ -289,8 +301,19 @@ Example:
             "string": "My Name"
         }
     }
-    
+
 ---
 
-### Note regarding select and selectAll
-`select` and `selectAll` commands return a JSON stringified version of the element in a stripped down form since DOM elements are not able to be stringified, so only non-object, non-function attributes will be returned, and nothing that is more than one level deep within an array.
+### suggestSelector
+**data**: `data string`
+
+Used to query what is on the remotely loaded page. Useful for finding out what is on the page when you are not sure of what selector to use. It will convert your query in to the most loose form possible. It can be used to search for partial tag names, partial class names and partial ids. It should return an array of valid selectors.
+
+Example:
+
+    {
+        "command": "suggestSelector",
+        "data": "b>d s.c"
+    }
+
+Expected response might be: `body>div span.cool-class`
