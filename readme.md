@@ -46,6 +46,76 @@ Check out the following `soundcloud.json` file:
 You can process it by running:
 
     node main.js soundcloud
+
+You will see the commands, data and results output to the console.
+
+Then you can open `soundcloud.json` to view the full results!
+    
+### Campaign Files
+
+Campaign files like the one above are simply JSON files with various steps (commands and accompanying data) instructing the mate application what to do. 
+
+Every step must have a `command` string, and optionally a mixed `data` object, like this:
+
+    {
+        "command": "open",
+        "data": "www.google.com"
+    }
+
+Some commands require that `data` be an object with mixed content, like the `getAttributeValues` command.
+
+When a campaign file is saved it will save additional information against each step, like so:
+
+    {
+        "command": "open",
+        "data": "www.google.com",
+        "performance": {
+            "start": 123456789,
+            "end": 123456789
+        },
+        "result": {
+            "success": true
+        },
+        "waiting": false,
+        "processed": true,
+        "step": 0
+    }
+
+`performance.start` is the time in microseconds when the command started, and `performance.end` is the time in microseconds when the command finished.
+
+`result` contains the output from the command, it can be various things, but usually will contains `success` denoting whether the command failed or succeeded.
+
+`waiting` and `processed` manage the state of the command. You can re-run a command by changing `processed` to false. `waiting` is true when the command is started, and false when the command completes. `processed` is false always except when the command is completed.
+
+`step` tells you the step number of the command. Each step is executed sequentially.
+
+#### Saving
+
+You can save your campaign simply by passing the `done` command with an optional filename. If a filename is not specified then the original campaign file will be overwritten. You probably don't want to overwrite your campaign file if you are using variables!
+
+For our above example we might do this:
+
+    {
+        "command": "done",
+        "data": "soundcloud-output"
+    }
+
+And it will save as `soundcloud-output.json`.
+
+#### Variables
+
+You can specify variables in your campaign template like so:
+
+    {
+        "command": "open",
+        "data": "http://www.mywebpage.com/user/{{args.username}}"
+    }
+
+All variables should be prefixed with `args.` as demonstrated above.
+
+Be sure to start the application like this:
+
+    node main.js campaignfile --username=businessguy
     
 ### Commands
 
@@ -111,9 +181,9 @@ Example:
 ---
 
 #### done
-**data**: null
+**data**: `fileName string`
 
-Completes the campaign
+Completes the campaign and ends the node process. You can optionally specify the filename that the campaign file will be saved as. If a filename is not specified, it will overwrite the original campaign file. The file extension `.json` will automatically be added if it is not present.
 
 ---
 
