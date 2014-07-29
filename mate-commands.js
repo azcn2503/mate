@@ -178,38 +178,43 @@ var commands = {
 		var fromStepData            = data[fromStep].result.data;
 		//if(typeof(fromStepData) === 'object') { fromStepData = [fromStepData]; }
 
+		// Support multiple attributes
+		if(typeof(attributeName) === 'string') { attributeName = [attributeName]; }
+
 		var res = returnType == 'array' ? [] : {};
 		kvp = returnType == 'array' ? false : kvp;
 
 		var count = 0;
 		var kvpK = kvpV = tmp = null;
 		for(var i in fromStepData) {
-			if(fromStepData[i][attributeName]) {
-				if(matchingExpression) {
-					var re = new RegExp(matchingExpression, matchingExpressionFlags);
-					if(!re.test(fromStepData[i][attributeName])) { continue; }
-				}
-				if(kvp) {
-					if(count % 2 == 0) {
-						kvpK = fromStepData[i][attributeName];
+			for(var j in attributeName) {
+				if(fromStepData[i][attributeName[j]]) {
+					if(matchingExpression) {
+						var re = new RegExp(matchingExpression, matchingExpressionFlags);
+						if(!re.test(fromStepData[i][attributeName[j]])) { continue; }
 					}
-					else {
-						kvpV = fromStepData[i][attributeName];
-						if(returnType == 'array') {
-							tmp = {};
-							tmp[kvpK] = kvpV;
-							res.push(tmp);
+					if(kvp) {
+						if(count % 2 == 0) {
+							kvpK = fromStepData[i][attributeName[j]];
 						}
 						else {
-							res[kvpK] = kvpV;
+							kvpV = fromStepData[i][attributeName[j]];
+							if(returnType == 'array') {
+								tmp = {};
+								tmp[kvpK] = kvpV;
+								res.push(tmp);
+							}
+							else {
+								res[kvpK] = kvpV;
+							}
 						}
 					}
+					else {
+						res.push(fromStepData[i][attributeName[j]]);
+					}
 				}
-				else {
-					res.push(fromStepData[i][attributeName]);
-				}
+				count++;
 			}
-			count++;
 		}
 
 		callback({data: res});
@@ -650,166 +655,98 @@ var commands = {
 		var selector = data[step].data;
 
 		var evalSuggest = function(selector, mode, inContext) {
-
+	
 			var self = this;
-
+			
 			this.returnNodes = function(nodes) {
-
-				if (self.mode == 'native') {
+				
+				if(self.mode == 'native') {
 					// Return an array of native elements
 					var arr = [];
-					for (var i in nodes) {
-						if (typeof(nodes[i]) !== 'object') {
-							continue;
-						}
+					for(var i in nodes) {
+						if(typeof(nodes[i]) !== 'object') { continue; }
 						arr.push(nodes[i]);
 					}
 					return arr;
 				}
-
-				if (self.mode == 'array' || self.mode == 'object') {
+				
+				if(self.mode == 'array' || self.mode == 'object') { 
 					var obj = {};
-					for (var i in nodes) {
-						if (!nodes[i] || !nodes[i].tagName) {
+					for(var i in nodes) {
+						if(!nodes[i] || !nodes[i].tagName) {
 							continue;
 						}
 						var tagString = self.inContext ? self.context == 'tag' ? nodes[i].tagName : '' : nodes[i].tagName;
 						var id = self.inContext ? self.context == 'id' ? nodes[i].id : '' : nodes[i].id;
 						id = id ? '#' + id : id;
 						var classString = '';
-						if (self.inContext && self.context == 'class') {
+						if(self.inContext && self.context == 'class') {
 							var classes = nodes[i].className.split(' ');
-							for (var i in classes) {
-								if (classes[i] == '') {
-									continue;
-								}
+							for(var i in classes) {
+								if(classes[i] == '') { continue; }
 								classString += '.' + classes[i];
 							}
 						}
 						var selector = tagString + id + classString;
 						obj[selector] = true;
 					}
-					if (self.mode == 'object') {
-						return obj;
-					} // Return a simple object of selectors
+					if(self.mode == 'object') { return obj; } // Return a simple object of selectors
 					var arr = [];
-					for (var i in obj) {
+					for(var i in obj) {
 						arr.push(i);
 					}
 					return arr; // Return a simple array of selectors
 				}
-
-			}
-
-			this.mode = mode || 'native';
+				
+			};
+			
+			this.mode = mode || 'array';
 			this.inContext = inContext || false;
 			this.context = 'tag';
 			var tagHint = null;
-
+			var tagHints = [];
+			
 			var contexts = {
 				'#': 'id',
 				'.': 'class'
 			};
-
-			// tags
-			var tagString = selector.replace(/\[.+?\]/g, '').replace(/( )*\>\1*/g, '>').match(/^[a-z0-9> *]+/i);
-			tagString = tagString ? tagString[0] : '*';
-			//console.log('tagString', tagString);
-
-			// classes
-			var classString = selector.match(/\.[a-z0-9\-_.]*/i);
-			classString = classString ? classString[0] : '';
-			classArr = classString.split('.');
-			classString = '';
-			for (var i in classArr) {
-				if (i == 0) {
-					continue;
-				}
-				if (classArr[i] == '') {
-					classString += '[class]';
-					continue;
-				}
-				classString += '[class*=' + classArr[i] + ']';
-			}
-
-			// ids
-			var idString = selector.match(/#[a-z0-9\-_]*/i);
-			idString = idString ? idString[0] : '';
-			if (/^#$/.test(idString)) {
-				idString = '[id]';
-			}
-			if (/#[a-z0-9\-_]/.test(idString)) {
-				idString = '[id*=' + idString.replace(/#/, '') + ']';
-			}
-
-			// get context
+			
+			// get context when in context mode
 			var lastSeparator = selector.match(/([> #.])(?=[^> #.]*$)/);
-			if (lastSeparator && this.inContext) {
+			if(this.inContext && lastSeparator) {
 				lastSeparator = lastSeparator[0];
-				if (contexts[lastSeparator]) {
-					this.context = contexts[lastSeparator];
-				}
+				if(contexts[lastSeparator]) { this.context = contexts[lastSeparator]; }
 			}
-
-			// work out where the separators are
-			var pos = 0;
-			var tagSeparators = [];
-			for (var i in tagString) {
-				if (tagString.charAt(i).match(/[> ]/)) {
-					tagSeparators.push(tagString.charAt(i));
-				}
+			
+			// add _tagName attribute to all elements (make tag names searchable)
+			for(var i = 0, els = document.querySelectorAll('*'), elsLength = els.length; i < elsLength; i++) {
+				if(!els[i] || !els[i].tagName) { continue; }
+				els[i].setAttribute('_tagName', els[i].tagName.toLowerCase());
 			}
-			//console.log('tagSeparators', tagSeparators);
-
-			// split the tag in to segments from the separators
-			var tagSegments = tagString.split(/[> ]/);
-			//console.log('tagSegments', tagSegments);
-
-			// find out if each of those segments exists and make it a wildcard if it does not
-			for (var i in tagSegments) {
-				if (tagHint) {
-					tagSegments[i] = '';
-					continue;
-				}
-				tagSegments[i] = tagSegments[i].trim();
-				tagSegments[i] = tagSegments[i] == '' ? '*' : tagSegments[i];
-				if (!document.querySelector(tagSegments[i])) {
-					tagHint = tagSegments[i];
-					tagSegments[i] = '*';
-				}
-				if (tagSeparators[i]) {
-					tagSegments[i] += tagSeparators[i];
-				}
-			}
-			tagString = tagSegments.join('');
-
-			// generate the new selector query
-			var newSelector = tagString + idString + classString;
-			console.log('selector', selector);
-			console.log('newSelector', newSelector);
-
+			
+			// generate the new query
+			var newSelector = [];
+			selector.split(',').forEach(function(el, i) {
+				el = el.replace(/(^|[> #.])([^> #.]*)/gi, function(match, p1, p2) {
+					if(p1 != '.' && p1 != '#') {
+						if(p2 == '' || p2 == '*') { return p1 + '*'; }
+						return p1 + '[_tagName^=' + p2 + ']';
+					}
+					return p1 + p2;
+				}).replace(/([#.])([a-z0-9\-_:]*)/gi, function(match, p1, p2) {
+					var attr = contexts[p1];
+					if(p2 == '') { return '[' + attr + ']'; }
+					return '[' + attr + '*=' + p2 + ']';
+				});
+				newSelector.push(el);
+			});
+			newSelector = newSelector.join(',');
+			
 			// execute the query on the current page
 			var nodes = document.querySelectorAll(newSelector);
-
-			// if there is no invalid tag, just return this data...
-			if (!tagHint) {
-				return this.returnNodes(nodes);
-			}
-
-			// ...otherwise return tags that match the tag hint
-			var tagHintRegex = new RegExp('^' + tagHint, 'i');
-			//console.log('tagHintRegex', tagHintRegex);
-			var els = [];
-			for (var i in nodes) {
-				if (!nodes[i] || !nodes[i].tagName) {
-					continue;
-				}
-				if (tagHintRegex.test(nodes[i].tagName)) {
-					els.push(nodes[i]);
-				}
-			}
-			return this.returnNodes(els);
-
+			
+			return this.returnNodes(nodes);
+			
 		}
 
 		driver.executeScript(evalSuggest, selector, 'array').then(function success(success) {
