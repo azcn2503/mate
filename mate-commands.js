@@ -368,10 +368,11 @@ var commands = {
 
 	},
 
-	'scrollPageToEnd': function(data, step, callback) {
+	'scrollPageTo': function(data, step, callback) {
 
 		var self          = this;
 		var data          = data[step].data || {};
+		var to            = data.to || 'end';
 		var timeout       = data.timeout || 60;
 		var scrolls       = 0;
 		var maxScrolls    = data.maxScrolls || null;
@@ -383,14 +384,24 @@ var commands = {
 
 		this.eventEmitter = new events.EventEmitter();
 
-		var evalScroll = function() {
-			window.scrollTo(0, document.body.scrollHeight);
+		var evalScroll = function(to) {
+			switch(to) {
+				case 'home':
+					window.scrollTo(0, 0);
+					break;
+				case 'end':
+					window.scrollTo(0, document.body.scrollHeight);
+					break;
+				default:
+					window.scrollTo(0, to);
+					break;
+			}
 			return document.body.scrollTop;
 		};
 
 		this.eventEmitter.on('scroll', function() {
 
-			driver.executeScript(evalScroll).then( function(scrollTop) {
+			driver.executeScript(evalScroll, to).then( function(scrollTop) {
 				self.eventEmitter.emit('processScroll', scrollTop);
 			});
 
@@ -440,6 +451,24 @@ var commands = {
 
 		this.eventEmitter.emit('scroll');
 		return;
+
+	},
+
+	'scrollPageToEnd': function(data, step, callback) {
+
+		data[step].data = data[step].data || {};
+		data[step].data.to = 'end';
+
+		commands.scrollPageTo(data, step, callback);
+
+	},
+
+	'scrollPageToHome': function(data, step, callback) {
+
+		data[step].data = data[step].data || {};
+		data[step].data.to = 'home';
+
+		commands.scrollPageTo(data, step, callback);
 
 	},
 
