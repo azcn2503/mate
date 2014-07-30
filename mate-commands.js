@@ -250,72 +250,92 @@ var commands = {
 
 		var res = kvp ? {} : [];
 
-		var count = 0;
 		var kvpK = kvpKNext = kvpV = kvpVNext = tmp = null;
-		for(var i in fromStepData) {
+
+		for(var i in fromStepData) { // loop through each element
+
+			var el = fromStepData[i];
 			var groupRes = {};
-			for(var j in attributeName) {
-				if(fromStepData[i][attributeName[j]]) {
+
+			for(var j in attributeName) { // loop through desired attribute names
+
+				var attr = attributeName[j];
+
+				// if the desired attribute exists on the element
+				if(el[attr]) {
+
+					// if a matching expression is provided
 					if(matchingExpression && matchingExpression[j]) {
 						var re = new RegExp(matchingExpression[j], matchingExpressionFlags[j]);
-						if(!re.test(fromStepData[i][attributeName[j]])) { continue; }
+						if(!re.test(el[attr])) { continue; }
 					}
+
+					// if we want a key value pair response
 					if(kvp && kvp.k.matchingExpression && kvp.v.matchingExpression) {
+
 						if(kvpKNext) {
-							// add this key, then continue
-							kvpK = self.generateKey(fromStepData[i][attributeName[j]]);
+							kvpK = self.generateKey(el[attr]);
 							kvpKNext = false;
 							res = self.addKey(res, kvpK); 
 							continue;
 						}
 						if(kvpVNext) {
-							// add this value, then continue
-							kvpV = fromStepData[i][attributeName[j]];
+							kvpV = el[attr];
 							kvpVNext = false;
 							res = self.addValue(res, kvpK, kvpV);
 							continue;
 						}
-						if(!kvp.k.attributeName || attributeName[j] == kvp.k.attributeName) {
+
+						if(!kvp.k.attributeName || attr == kvp.k.attributeName) {
 							var re = new RegExp(kvp.k.matchingExpression, kvp.k.matchingExpressionFlags);
-							if(re.test(fromStepData[i][attributeName[j]])) {
+							if(re.test(el[attr])) {
 								if(kvp.k.mode == 'after') {
+									// flag the next attribute value as a key
 									kvpVNext = false;
 									kvpKNext = true;
 									continue;
 								}
-								kvpK = self.generateKey(fromStepData[i][attributeName[j]]);
+								kvpK = self.generateKey(el[attr]);
 							}
 						}
-						if(!kvp.v.attributeName || attributeName[j] == kvp.v.attributeName) {
+						if(!kvp.v.attributeName || attr == kvp.v.attributeName) {
 							var re = new RegExp(kvp.v.matchingExpression, kvp.v.matchingExpressionFlags);
-							if(re.test(fromStepData[i][attributeName[j]])) {
+							if(re.test(el[attr])) {
 								if(kvp.v.mode == 'after') {
+									// flag the next attribute value as a value
 									kvpVNext = true;
 									kvpKNext = false;
 									continue;
 								}
-								kvpV = fromStepData[i][attributeName[j]];
+								kvpV = el[attr];
 							}
 						}
+
 						if(kvpK) {
 							res = self.addKey(res, kvpK);
 							if(kvpV) {
 								res = self.addValue(res, kvpK, kvpV);
 							}
 						}
+
 					}
+
 					if(!kvp) {
 						if(group) {
-							groupRes[attributeName[j]] = fromStepData[i][attributeName[j]];
+							groupRes[attr] = el[attr];
 						}
-						else { res.push(fromStepData[i][attributeName[j]]); }
+						else { res.push(el[attr]); }
 					}
+
 				}
-				count++;
+
 			}
+
+			// add the grouped response to the result if grouping is enabled
 			if(group && Object.keys(groupRes).length > 0) {
 				res.push(groupRes);
 			}
+
 		}
 
 		callback({data: res});
