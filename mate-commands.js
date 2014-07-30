@@ -180,6 +180,12 @@ var commands = {
 
 		// Support multiple attributes
 		if(typeof(attributeName) === 'string') { attributeName = [attributeName]; }
+		if(typeof(matchingExpression) === 'string') { matchingExpression = [matchingExpression]; }
+		if(typeof(matchingExpressionFlags) === 'string') { matchingExpressionFlags = [matchingExpressionFlags]; }
+
+		console.log('attributeName', attributeName);
+		console.log('matchingExpression', matchingExpression);
+		console.log('matchingExpressionFlags', matchingExpressionFlags);
 
 		var res = returnType == 'array' ? [] : {};
 		kvp = returnType == 'array' ? false : kvp;
@@ -189,8 +195,8 @@ var commands = {
 		for(var i in fromStepData) {
 			for(var j in attributeName) {
 				if(fromStepData[i][attributeName[j]]) {
-					if(matchingExpression) {
-						var re = new RegExp(matchingExpression, matchingExpressionFlags);
+					if(matchingExpression && matchingExpression[j]) {
+						var re = new RegExp(matchingExpression[j], matchingExpressionFlags[j]);
 						if(!re.test(fromStepData[i][attributeName[j]])) { continue; }
 					}
 					if(kvp) {

@@ -207,9 +207,9 @@ This will return only those attribute values that match the expression `[^/]*$`
 ---
 
 #### getAttributeValues
-**data**: { `fromStep int`, `attributeName mixed`, [`matchingExpression string = null`, [`matchingExpressionFlags string = ''`]] }
+**data**: { `fromStep int`, `attributeName mixed`, [`matchingExpression mixed`, [`matchingExpressionFlags mixed`]] }
 
-Returns attribute values from attribute names from the step defined by `fromStep`. `attributeNames` can be a string, or an array of strings. You can optionally specify a regular expression to match against using `matchingExpression`, and provide flags with `matchingExpressionFlags`. If you wish to match different attribute values (when you have specified an array of attribute names) then you can adjust your regular expression accordingly.
+Returns attribute values from attribute names from the step defined by `fromStep`. `attributeName` can be a string, or an array of strings. You can optionally specify a regular expression to match against using `matchingExpression`, and provide flags with `matchingExpressionFlags`. If you specify an array of strings for `attributeName` and wish to match expressions against them individually, then you should use an array of strings for `matchingExpression` and `matchingExpressionFlags` also; the indexes of these arrays should match up.
 
 Example:
 
@@ -236,6 +236,19 @@ Example:
     }
 
 This will retrurn all the innerHTML and innerText values.
+
+Example:
+
+    {
+        "command": "getAttributeValues",
+        "data": {
+            "fromStep": 1,
+            "attributeName": ["innerHTML", "innerText"],
+            "matchingExpression": ["[0-9]", "[a-zA-Z]"
+        }
+    }
+
+This will return all the innerHTML values when they contain numbers, and the innerText values when they contain letters.
 
 ---
 
