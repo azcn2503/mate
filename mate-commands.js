@@ -446,14 +446,15 @@ var commands = {
 		fileName = 'commands/save/' + fileName + '.' + fileType;
 
 		var saveData = '';
-		if(fileType == 'json') { saveData = JSON.stringify(fromStepData); }
+		if(fileType == 'json') { saveData = JSON.stringify(fromStepData, null, '\t'); }
 		else { saveData = fromStepData; }
 
-		fs.writeFileSync(fileName, JSON.stringify(fromStepData), {'encoding': 'utf-8'});
+		fs.writeFileSync(fileName, saveData, {'encoding': 'utf-8'});
 
 		callback({
 			data: {
-				'filename': fileName
+				'success': true,
+				'fileName': fileName
 			}
 		});
 
