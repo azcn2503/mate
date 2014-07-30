@@ -154,7 +154,7 @@ var commands = {
 
 		// _id is the campaign ID passed from processCommand
 
-		var fileName = data[step].data || data[step]._id;
+		var fileName = data[step].data || data[step]._id || '';
 		if(fileName != '') {
 			fileName = 'output/' + fileName.replace(/[\/\\\<\>\|\":?*]/g, '-');
 			if(!/\.json$/.test(fileName)) { fileName += '.json'; }
@@ -239,7 +239,9 @@ var commands = {
 			kvp.v.matchingExpression = kvp.v.matchingExpression || null;
 			kvp.v.matchingExpressionFlags = kvp.v.matchingExpressionFlags || '';
 			this.keyType = kvp.v.type || 'string'; // array, string
+			this.keyName = kvp.k.name || null;
 			this.uniqueKey = kvp.k.unique || false;
+			this.uniqueKey = this.keyName ? true : kvp.k.uniqueKey;
 			this.keyIndex = 0;
 		}
 
@@ -274,7 +276,7 @@ var commands = {
 					if(kvp && kvp.k.matchingExpression && kvp.v.matchingExpression) {
 
 						if(kvpKNext) {
-							kvpK = self.generateKey(el[attr]);
+							kvpK = self.keyName ? self.generateKey(self.keyName) : self.generateKey(el[attr]);
 							kvpKNext = false;
 							res = self.addKey(res, kvpK); 
 							continue;
@@ -295,7 +297,7 @@ var commands = {
 									kvpKNext = true;
 									continue;
 								}
-								kvpK = self.generateKey(el[attr]);
+								kvpK = self.keyName || self.generateKey(el[attr]);
 							}
 						}
 						if(!kvp.v.attributeName || attr == kvp.v.attributeName) {
@@ -373,25 +375,35 @@ var commands = {
 	'matchEach': function(data, step, callback) {
 
 		var fromStep                = data[step].data.fromStep; // required
+		var fromIndex               = data[step].data.fromIndex || 0;
+		var subIndex                = data[step].data.subIndex || null;
 		var matchingExpression      = data[step].data.matchingExpression; // required
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 		var mode                    = data[step].data.mode || 'match';
 		var fromStepData            = data[fromStep].result.data;
+		if(fromIndex) { fromStepData = fromStepData[fromIndex]; }
+		if(typeof(subIndex) === 'string') { subIndex = [subIndex]; }
 
 		var res = [];
 
 		var re = new RegExp(matchingExpression, matchingExpressionFlags);
 
 		for(var i in fromStepData) {
-			if(!re.test(fromStepData[i])) { continue; }
+			var subject = fromStepData[i];
+			if(subIndex) {
+				for(var j in subIndex) {
+					subject = subject[subIndex[j]];
+				}
+			}
+			if(!re.test(subject)) { continue; }
 			if(mode == 'full') {
 				res.push(fromStepData[i]);
 			}
 			if(mode == 'array') {
-				res.push(fromStepData[i].match(re));
+				res.push(subject.match(re));
 			}
 			if(mode == 'match') {
-				res.push(fromStepData[i].match(re)[0]);
+				res.push(subject.match(re)[0]);
 			}
 		}
 

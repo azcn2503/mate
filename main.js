@@ -55,6 +55,14 @@ var Mate = function() {
 			}
 
 			self.data = JSON.parse(content);
+			
+			self.step = 0;
+			self.eventEmitter.emit('processCommand');
+
+		});
+
+		self.eventEmitter.on('retry', function() {
+
 			self.step = 0;
 			self.eventEmitter.emit('processCommand');
 
@@ -63,10 +71,12 @@ var Mate = function() {
 		self.eventEmitter.on('processCommand', function() {
 
 			self.data[self.step].processed = self.data[self.step].processed || false;
+
 			if(self.data[self.step].processed && !self.forceRetry) {
 				self.eventEmitter.emit('processNextCommand');
 				return;
 			}
+
 			self.data[self.step].data = self.data[self.step].data || null;
 			self.data[self.step].waiting = true;
 			self.data[self.step].step = self.step;
@@ -78,7 +88,7 @@ var Mate = function() {
 				self.data[self.step]._id = self.campaign.id;
 			}
 
-			//self.eventEmitter.emit('save');
+			//self.eventEmitter.emit('save', self.fileName);
 			
 			if(self.data[self.step].description) {
 				console.log('Description: ', self.data[self.step].description);
@@ -87,9 +97,9 @@ var Mate = function() {
 			console.log('Data:        ', self.data[self.step].data);
 
 			if(!commands[self.data[self.step].command]) {
-				self.eventEmitter.emit('processNextCommand', 'Command `' + self.data[self.step].command + '` does not exist');
+				process.exit();
 				return;
-			};
+			}
 
 			commands[self.data[self.step].command](self.data, self.step, function(res) {
 				self.eventEmitter.emit('commandProcessed', res);
@@ -115,9 +125,11 @@ var Mate = function() {
 
 			self.data[self.step].waiting = false;
 			self.data[self.step].processed = true;
-			self.data[self.step].result = res;
 			self.data[self.step].performance.end = Date.now();
-			//self.eventEmitter.emit('save');
+			
+			//self.eventEmitter.emit('save', self.fileName);
+
+			self.data[self.step].result = res;
 
 			var time = self.data[self.step].performance.end - self.data[self.step].performance.start;
 
@@ -149,7 +161,7 @@ var Mate = function() {
 
 			self.campaign.timer++;
 			setTimeout( function() {
-				self.eventEmitter.emit('load');
+				self.eventEmitter.emit('retry');
 			}, 1000);
 
 		});
