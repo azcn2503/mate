@@ -7,6 +7,21 @@ driver.manage().timeouts().implicitlyWait(1000);
 
 var commands = {
 
+	'acceptAlert': function(data, step, callback) {
+
+		driver.switchTo().alert().then( function success(alert) {
+			alert.getText().then( function success(text) {
+				alert.accept();
+				callback({data: text});
+			}).then(null, function error() {
+				callback({success: false});
+			});
+		}).then(null, function error() {
+			callback({success: false});
+		});
+
+	},
+
 	'assert': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep || step - 1;
@@ -141,6 +156,7 @@ var commands = {
 
 		var fileName = data[step].data || data[step]._id;
 		if(fileName != '') {
+			fileName = 'output/' + fileName.replace(/[\/\\\<\>\|\":?*]/g, '-');
 			if(!/\.json$/.test(fileName)) { fileName += '.json'; }
 		}
 
@@ -169,57 +185,136 @@ var commands = {
 
 	'getAttributeValues': function(data, step, callback) {
 
+		var self = this;
+
+		this.generateKey = function(key, unique) {
+
+			if(self.uniqueKey) {
+				key = '_' + self.keyIndex + '_' + key;
+				self.keyIndex++;
+			}
+			
+			return key;
+
+		};
+
+		this.addKey = function(res, key) {
+
+			if(self.keyType == 'string') { res[key] = ''; }
+			if(self.keyType == 'array') { res[key] = []; }
+
+			return res;
+
+		};
+
+		this.addValue = function(res, key, val) {
+
+			if(!val || val == '') { return res; }
+
+			if(!res[key]) { res = self.addKey(res, key); }
+
+			if(self.keyType == 'string') { res[key] += val; }
+			if(self.keyType == 'array') { res[key].push(val); }
+
+			return res;
+
+		};
+
 		var fromStep                = data[step].data.fromStep || step - 1; // required
 		var attributeName           = data[step].data.attributeName; // required
 		var matchingExpression      = data[step].data.matchingExpression || null;
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 		var kvp                     = data[step].data.kvp || null;
 		var returnType              = data[step].data.returnType || 'array';
+		var group                   = data[step].data.group || false;
 		var fromStepData            = data[fromStep].result.data;
 		//if(typeof(fromStepData) === 'object') { fromStepData = [fromStepData]; }
+
+		// key value pair settings
+		if(kvp) {
+			kvp.k = kvp.k || {};
+			kvp.k.matchingExpression = kvp.k.matchingExpression || null;
+			kvp.k.matchingExpressionFlags = kvp.k.matchingExpressionFlags || '';
+			kvp.v = kvp.v || {};
+			kvp.v.matchingExpression = kvp.v.matchingExpression || null;
+			kvp.v.matchingExpressionFlags = kvp.v.matchingExpressionFlags || '';
+			this.keyType = kvp.v.type || 'string'; // array, string
+			this.uniqueKey = kvp.k.unique || false;
+			this.keyIndex = 0;
+		}
 
 		// Support multiple attributes
 		if(typeof(attributeName) === 'string') { attributeName = [attributeName]; }
 		if(typeof(matchingExpression) === 'string') { matchingExpression = [matchingExpression]; }
 		if(typeof(matchingExpressionFlags) === 'string') { matchingExpressionFlags = [matchingExpressionFlags]; }
 
-		console.log('attributeName', attributeName);
-		console.log('matchingExpression', matchingExpression);
-		console.log('matchingExpressionFlags', matchingExpressionFlags);
-
-		var res = returnType == 'array' ? [] : {};
-		kvp = returnType == 'array' ? false : kvp;
+		var res = kvp ? {} : [];
 
 		var count = 0;
-		var kvpK = kvpV = tmp = null;
+		var kvpK = kvpKNext = kvpV = kvpVNext = tmp = null;
 		for(var i in fromStepData) {
+			var groupRes = {};
 			for(var j in attributeName) {
 				if(fromStepData[i][attributeName[j]]) {
 					if(matchingExpression && matchingExpression[j]) {
 						var re = new RegExp(matchingExpression[j], matchingExpressionFlags[j]);
 						if(!re.test(fromStepData[i][attributeName[j]])) { continue; }
 					}
-					if(kvp) {
-						if(count % 2 == 0) {
-							kvpK = fromStepData[i][attributeName[j]];
+					if(kvp && kvp.k.matchingExpression && kvp.v.matchingExpression) {
+						if(kvpKNext) {
+							// add this key, then continue
+							kvpK = self.generateKey(fromStepData[i][attributeName[j]]);
+							kvpKNext = false;
+							res = self.addKey(res, kvpK); 
+							continue;
 						}
-						else {
+						if(kvpVNext) {
+							// add this value, then continue
 							kvpV = fromStepData[i][attributeName[j]];
-							if(returnType == 'array') {
-								tmp = {};
-								tmp[kvpK] = kvpV;
-								res.push(tmp);
+							kvpVNext = false;
+							res = self.addValue(res, kvpK, kvpV);
+							continue;
+						}
+						if(!kvp.k.attributeName || attributeName[j] == kvp.k.attributeName) {
+							var re = new RegExp(kvp.k.matchingExpression, kvp.k.matchingExpressionFlags);
+							if(re.test(fromStepData[i][attributeName[j]])) {
+								if(kvp.k.mode == 'after') {
+									kvpVNext = false;
+									kvpKNext = true;
+									continue;
+								}
+								kvpK = self.generateKey(fromStepData[i][attributeName[j]]);
 							}
-							else {
-								res[kvpK] = kvpV;
+						}
+						if(!kvp.v.attributeName || attributeName[j] == kvp.v.attributeName) {
+							var re = new RegExp(kvp.v.matchingExpression, kvp.v.matchingExpressionFlags);
+							if(re.test(fromStepData[i][attributeName[j]])) {
+								if(kvp.v.mode == 'after') {
+									kvpVNext = true;
+									kvpKNext = false;
+									continue;
+								}
+								kvpV = fromStepData[i][attributeName[j]];
+							}
+						}
+						if(kvpK) {
+							res = self.addKey(res, kvpK);
+							if(kvpV) {
+								res = self.addValue(res, kvpK, kvpV);
 							}
 						}
 					}
-					else {
-						res.push(fromStepData[i][attributeName[j]]);
+					if(!kvp) {
+						if(group) {
+							groupRes[attributeName[j]] = fromStepData[i][attributeName[j]];
+						}
+						else { res.push(fromStepData[i][attributeName[j]]); }
 					}
 				}
 				count++;
+			}
+			if(group && Object.keys(groupRes).length > 0) {
+				res.push(groupRes);
 			}
 		}
 
@@ -249,21 +344,6 @@ var commands = {
 
 		driver.getAllWindowHandles().then(function success(handles) {
 			callback({data: handles});
-		}).then(null, function error() {
-			callback({success: false});
-		});
-
-	},
-
-	'acceptAlert': function(data, step, callback) {
-
-		driver.switchTo().alert().then( function success(alert) {
-			alert.getText().then( function success(text) {
-				alert.accept();
-				callback({data: text});
-			}).then(null, function error() {
-				callback({success: false});
-			});
 		}).then(null, function error() {
 			callback({success: false});
 		});
@@ -327,6 +407,9 @@ var commands = {
 		var fileName     = data[step].data.fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0');
 		var fileType     = data[step].data.fileType || 'json';
 		var fromStepData = data[fromStep].result.data;
+
+		fileName = fileName.replace(/[\/\\\<\>\|\":?*]/g, '-');
+
 		if(typeof(fromStepData) === 'array' || typeof(fromStepData) === 'object') {
 			if(typeof(fromIndex) === 'array' || typeof(fromIndex) === 'object') {
 				for(var i in fromIndex) {
