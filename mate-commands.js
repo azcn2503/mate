@@ -170,7 +170,7 @@ var commands = {
 		var evalScript   = data[step].data.eval;
 		var fromStepData = data[fromStep].result.data;
 
-		evalScript = '(function() {' + evalScript + '}.bind(d))()';
+		evalScript = '(function() { var webdriver = driver = events = fs = commands = null; ' + evalScript + '}.bind(d))()';
 
 		var d = fromStepData;
 		var res = eval(evalScript);
@@ -187,7 +187,7 @@ var commands = {
 
 		var res = [];
 
-		evalScript = '(function() {' + evalScript + '}.bind(d))()';
+		evalScript = '(function() { var webdriver = driver = events = fs = commands = null; ' + evalScript + '}.bind(d))()';
 
 		for(var i in fromStepData) {
 			var d = fromStepData[i];
