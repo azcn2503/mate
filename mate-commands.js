@@ -200,6 +200,8 @@ var commands = {
 
 	'getAttributeValues': function(data, step, callback) {
 
+		// TODO: Reworking the key value pair stuff to support multiple key and value conditions. Please no touch!
+
 		var self = this;
 
 		this.generateKey = function(key, unique) {
@@ -246,7 +248,7 @@ var commands = {
 		//if(typeof(fromStepData) === 'object') { fromStepData = [fromStepData]; }
 
 		// key value pair settings
-		if(kvp) {
+		/*if(kvp) {
 			kvp.k = kvp.k || {};
 			kvp.k.matchingExpression = kvp.k.matchingExpression || null;
 			kvp.k.matchingExpressionFlags = kvp.k.matchingExpressionFlags || '';
@@ -258,7 +260,7 @@ var commands = {
 			this.uniqueKey = kvp.k.unique || false;
 			this.uniqueKey = this.keyName ? true : kvp.k.uniqueKey;
 			this.keyIndex = 0;
-		}
+		}*/
 
 		// Support multiple attributes
 		if(typeof(attributeName) === 'string') { attributeName = [attributeName]; }
@@ -278,72 +280,69 @@ var commands = {
 
 				var attr = attributeName[j];
 
-				// if the desired attribute exists on the element
-				if(el[attr]) {
+				if(!el[attr]) { continue; }
 
-					// if a matching expression is provided
-					if(matchingExpression && matchingExpression[j]) {
-						var re = new RegExp(matchingExpression[j], matchingExpressionFlags[j]);
-						if(!re.test(el[attr])) { continue; }
+				// if a matching expression is provided
+				if(matchingExpression && matchingExpression[j]) {
+					var re = new RegExp(matchingExpression[j], matchingExpressionFlags[j]);
+					if(!re.test(el[attr])) { continue; }
+				}
+
+				// if we want a key value pair response
+				/*if(kvp && kvp.k.matchingExpression && kvp.v.matchingExpression) {
+
+					if(kvpKNext) {
+						kvpK = self.keyName ? self.generateKey(self.keyName) : self.generateKey(el[attr]);
+						kvpKNext = false;
+						res = self.addKey(res, kvpK); 
+						continue;
+					}
+					if(kvpVNext) {
+						kvpV = el[attr];
+						kvpVNext = false;
+						res = self.addValue(res, kvpK, kvpV);
+						continue;
 					}
 
-					// if we want a key value pair response
-					if(kvp && kvp.k.matchingExpression && kvp.v.matchingExpression) {
-
-						if(kvpKNext) {
-							kvpK = self.keyName ? self.generateKey(self.keyName) : self.generateKey(el[attr]);
-							kvpKNext = false;
-							res = self.addKey(res, kvpK); 
-							continue;
+					if(!kvp.k.attributeName || attr == kvp.k.attributeName) {
+						var re = new RegExp(kvp.k.matchingExpression, kvp.k.matchingExpressionFlags);
+						if(re.test(el[attr])) {
+							if(kvp.k.mode == 'after') {
+								// flag the next attribute value as a key
+								kvpVNext = false;
+								kvpKNext = true;
+								continue;
+							}
+							kvpK = self.keyName || self.generateKey(el[attr]);
 						}
-						if(kvpVNext) {
+					}
+					if(!kvp.v.attributeName || attr == kvp.v.attributeName) {
+						var re = new RegExp(kvp.v.matchingExpression, kvp.v.matchingExpressionFlags);
+						if(re.test(el[attr])) {
+							if(kvp.v.mode == 'after') {
+								// flag the next attribute value as a value
+								kvpVNext = true;
+								kvpKNext = false;
+								continue;
+							}
 							kvpV = el[attr];
-							kvpVNext = false;
+						}
+					}
+
+					if(kvpK) {
+						res = self.addKey(res, kvpK);
+						if(kvpV) {
 							res = self.addValue(res, kvpK, kvpV);
-							continue;
 						}
-
-						if(!kvp.k.attributeName || attr == kvp.k.attributeName) {
-							var re = new RegExp(kvp.k.matchingExpression, kvp.k.matchingExpressionFlags);
-							if(re.test(el[attr])) {
-								if(kvp.k.mode == 'after') {
-									// flag the next attribute value as a key
-									kvpVNext = false;
-									kvpKNext = true;
-									continue;
-								}
-								kvpK = self.keyName || self.generateKey(el[attr]);
-							}
-						}
-						if(!kvp.v.attributeName || attr == kvp.v.attributeName) {
-							var re = new RegExp(kvp.v.matchingExpression, kvp.v.matchingExpressionFlags);
-							if(re.test(el[attr])) {
-								if(kvp.v.mode == 'after') {
-									// flag the next attribute value as a value
-									kvpVNext = true;
-									kvpKNext = false;
-									continue;
-								}
-								kvpV = el[attr];
-							}
-						}
-
-						if(kvpK) {
-							res = self.addKey(res, kvpK);
-							if(kvpV) {
-								res = self.addValue(res, kvpK, kvpV);
-							}
-						}
-
 					}
 
-					if(!kvp) {
-						if(group) {
-							groupRes[attr] = el[attr];
-						}
-						else { res.push(el[attr]); }
-					}
+				}*/
 
+				if(!kvp) {
+					if(group) {
+						groupRes[attr] = el[attr];
+					}
+					else { res.push(el[attr]); }
 				}
 
 			}
