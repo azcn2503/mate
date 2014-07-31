@@ -164,6 +164,21 @@ var commands = {
 
 	},
 
+	'eval': function(data, step, callback) {
+
+		var fromStep     = data[step].data.fromStep;
+		var evalScript   = data[step].data.eval;
+		var fromStepData = data[fromStep].result.data;
+
+		evalScript = '(function() {' + evalScript + '}.bind(d))()';
+
+		var d = fromStepData;
+		var res = eval(evalScript);
+
+		callback({data: res});
+
+	},
+
 	'evalEach': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep;
@@ -172,10 +187,10 @@ var commands = {
 
 		var res = [];
 
-		evalScript = '(function() {' + evalScript + '}.bind(s))()';
+		evalScript = '(function() {' + evalScript + '}.bind(d))()';
 
 		for(var i in fromStepData) {
-			var s = fromStepData[i];
+			var d = fromStepData[i];
 			res.push(eval(evalScript));
 		}
 
