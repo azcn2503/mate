@@ -187,10 +187,29 @@ Completes the campaign and ends the node process. You can optionally specify the
 
 ---
 
-#### evalEach
+#### eval
 **data**: { `fromStep`, `eval` }
 
 Evaluates JavaScript against a set of results returned by `getAttributeValues`. The result data takes the context of `this` when evaluated.
+
+Example:
+
+    {
+        "command": "evalEach",
+        "data": {
+            "fromStep": 1,
+            "eval": "return JSON.stringify(this);"
+        }
+    }
+    
+Returns a JSON stringified array of the current set of results.
+
+Note that you cannot access file system, database or webdriver commands from an eval script.
+
+#### evalEach
+**data**: { `fromStep`, `eval` }
+
+Evaluates JavaScript against each item in a set of results returned by `getAttributeValues`. Each item takes the context of `this` when evaluated.
 
 Example:
 
@@ -204,10 +223,12 @@ Example:
     
 This will return only those attribute values that match the expression `[^/]*$`
 
+Note that you cannot access file system, database or webdriver commands from an eval script.
+
 ---
 
 #### getAttributeValues
-**data**: { `fromStep int`, `attributeName mixed`, [`matchingExpression mixed`, [`matchingExpressionFlags mixed`]] }
+**data**: { `fromStep int`, `attributeName mixed`, [`matchingExpression mixed`, [`matchingExpressionFlags mixed`, [`kvp mixed`]]] }
 
 Returns attribute values from attribute names from the step defined by `fromStep`. `attributeName` can be a string, or an array of strings. You can optionally specify a regular expression to match against using `matchingExpression`, and provide flags with `matchingExpressionFlags`. If you specify an array of strings for `attributeName` and wish to match expressions against them individually, then you should use an array of strings for `matchingExpression` and `matchingExpressionFlags` also; the indexes of these arrays should match up.
 
@@ -249,6 +270,116 @@ Example:
     }
 
 This will return all the innerHTML values when they contain numbers, and the innerText values when they contain letters.
+
+**Key value pairing**
+
+You can also group the results by key and value pairs if you provide some instructions about how to create these keys and values. The syntax for key value pairs is like this:
+
+    "kvp": {
+        "k": [
+            {
+                "mode": "after" | null,
+                "attributeName": "attribute name",
+                "matchingExpression": "regular expression",
+                "matchingExpressionFlags": "flags" | "",
+                "name": "something to rename the key to"
+            }
+        ],
+        "v": [
+            {
+                "mode": "after" | null,
+                "attributeName": "attribute name",
+                "matchingExpression": "regular expression",
+                "matchingExpressionFlags": "flags" | ""
+            }
+        ],
+        "groupByKeyName": true | false
+    }
+
+You can have multiple keys and multiple values.
+
+Setting `mode` to `"after"` means that the following item will be used as a key. Setting `groupByKeyName` to `true` groups your results when all of your keys are present in a result set.
+
+Consider the following command:
+
+    {
+		"command": "getAttributeValues",
+		"data": {
+			"fromStep": 1,
+			"fromIndex": 0,
+			"attributeName": ["tagName", "innerText"],
+			"kvp": {
+				"k": [
+					{
+						"attributeName": "tagName",
+						"matchingExpression": "TD",
+						"name": "Specs"
+					},
+					{
+						"attributeName": "tagName",
+						"matchingExpression": "SPAN",
+						"name": "Price"
+					}
+				],
+				"v": [
+					{
+						"mode": "after",
+						"attributeName": "tagName",
+						"matchingExpression": "TD|SPAN"
+					}
+				],
+				"groupByKeyName": true
+			}
+		}
+	}
+
+What is happening here is: all `tagName` and `innerText` attributes are being grabbed from step `1`. We are then creating a key value pair response where one of the keys will be created when the `tagName` attribute matches the expression `TD` and will be renamed to `Specs`, and the other key will be created when the `tagName` attribute matches the expression `SPAN` and will be renamed to `Price`. The values for these keys will be whatever comes *after* a `tagName` attribute matches the expression `TD|SPAN` (ie: after the keys are created). Therefore, results might look like this:
+
+    [
+    	{
+    		"Specs": "Refurbished 13.3-inch MacBook Pro 2.4GHz Dual-core Intel i5 with Retina Display\nOriginally released October 2013\n13.3-inch (diagonal) Retina display; 2560x1600 resolution at 227 pixels per inch\n4GB of 1600MHz DDR3L SDRAM\n128GB flash storage1\n720p FaceTime HD camera\nIntel Iris Graphics \n",
+    		"Price": "£799.00"
+    	},
+    	{
+    		"Specs": "Refurbished 13.3-inch MacBook Pro 2.4GHz Dual-core Intel i5 with Retina Display\nOriginally released October 2013\n13.3-inch (diagonal) Retina display; 2560x1600 resolution at 227 pixels per inch\n8GB of 1600MHz DDR3L SDRAM\n256GB flash storage1\n720p FaceTime HD camera\nIntel Iris Graphics \n",
+    		"Price": "£929.00"
+    	},
+    	...
+    ]
+    
+Without `groupByKeyName`, the results look like this:
+
+    [
+    	{
+    		"Specs": "Refurbished 13.3-inch MacBook Pro 2.4GHz Dual-core Intel i5 with Retina Display\nOriginally released October 2013\n13.3-inch (diagonal) Retina display; 2560x1600 resolution at 227 pixels per inch\n4GB of 1600MHz DDR3L SDRAM\n128GB flash storage1\n720p FaceTime HD camera\nIntel Iris Graphics \n"
+    	},
+    	{
+    		"Price": "£799.00"
+    	},
+    	{
+    		"Specs": "Refurbished 13.3-inch MacBook Pro 2.4GHz Dual-core Intel i5 with Retina Display\nOriginally released October 2013\n13.3-inch (diagonal) Retina display; 2560x1600 resolution at 227 pixels per inch\n8GB of 1600MHz DDR3L SDRAM\n256GB flash storage1\n720p FaceTime HD camera\nIntel Iris Graphics \n"
+    	},
+    	{
+    		"Price": "£929.00"
+    	},
+    	...
+    ]
+    
+And without any key value pairing at all, the results look like this:
+
+    [
+    	"TD",
+    	"Refurbished 13.3-inch MacBook Pro 2.4GHz Dual-core Intel i5 with Retina Display\nOriginally released October 2013\n13.3-inch (diagonal) Retina display; 2560x1600 resolution at 227 pixels per inch\n4GB of 1600MHz DDR3L SDRAM\n128GB flash storage1\n720p FaceTime HD camera\nIntel Iris Graphics \n",
+    	"SPAN",
+    	"£799.00",
+    	"TD",
+    	"Refurbished 13.3-inch MacBook Pro 2.4GHz Dual-core Intel i5 with Retina Display\nOriginally released October 2013\n13.3-inch (diagonal) Retina display; 2560x1600 resolution at 227 pixels per inch\n8GB of 1600MHz DDR3L SDRAM\n256GB flash storage1\n720p FaceTime HD camera\nIntel Iris Graphics \n",
+    	"SPAN",
+    	"£929.00",
+    	...
+    ]
+    
+Key value pairing and grouping by key names can make working with related data much easier.
 
 ---
 

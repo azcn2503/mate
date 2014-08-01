@@ -170,7 +170,7 @@ var commands = {
 		var evalScript   = data[step].data.eval;
 		var fromStepData = data[fromStep].result.data;
 
-		evalScript = '(function() { var webdriver = driver = events = fs = commands = null; ' + evalScript + '}.bind(d))()';
+		evalScript = '(function() {' + evalScript + '}.bind(d))()';
 
 		var d = fromStepData;
 		var res = eval(evalScript);
@@ -187,7 +187,7 @@ var commands = {
 
 		var res = [];
 
-		evalScript = '(function() { var webdriver = driver = events = fs = commands = null; ' + evalScript + '}.bind(d))()';
+		evalScript = '(function() {' + evalScript + '}.bind(d))()';
 
 		for(var i in fromStepData) {
 			var d = fromStepData[i];
@@ -199,8 +199,6 @@ var commands = {
 	},
 
 	'getAttributeValues': function(data, step, callback) {
-
-		// TODO: Reworking the key value pair stuff to support multiple key and value conditions. Please no touch!
 
 		var self = this;
 
@@ -217,8 +215,7 @@ var commands = {
 
 		this.addKey = function(res, key) {
 
-			if(self.keyType == 'string') { res[key] = ''; }
-			if(self.keyType == 'array') { res[key] = []; }
+			res[key] = res[key] ? res[key] : '';
 
 			return res;
 
@@ -230,10 +227,28 @@ var commands = {
 
 			if(!res[key]) { res = self.addKey(res, key); }
 
-			if(self.keyType == 'string') { res[key] += val; }
-			if(self.keyType == 'array') { res[key].push(val); }
+			res[key] += val;
 
 			return res;
+
+		};
+
+		this.groupResByKeyNameSatisfied = function(res, keys) {
+
+			var tmpName = 0;
+			var tmpMatch = 0;
+			for(var i in keys) {
+				if(keys[i].name) {
+					tmpName++;
+					if(groupRes[keys[i].name]) {
+						tmpMatch++;
+					}
+				}
+			}
+			if(tmpName == tmpMatch) {
+				return true;
+			}
+			return false;
 
 		};
 
@@ -245,36 +260,39 @@ var commands = {
 		var returnType              = data[step].data.returnType || 'array';
 		var group                   = data[step].data.group || false;
 		var fromStepData            = data[fromStep].result.data;
+
 		//if(typeof(fromStepData) === 'object') { fromStepData = [fromStepData]; }
 
 		// key value pair settings
-		/*if(kvp) {
-			kvp.k = kvp.k || {};
-			kvp.k.matchingExpression = kvp.k.matchingExpression || null;
-			kvp.k.matchingExpressionFlags = kvp.k.matchingExpressionFlags || '';
-			kvp.v = kvp.v || {};
-			kvp.v.matchingExpression = kvp.v.matchingExpression || null;
-			kvp.v.matchingExpressionFlags = kvp.v.matchingExpressionFlags || '';
-			this.keyType = kvp.v.type || 'string'; // array, string
-			this.keyName = kvp.k.name || null;
-			this.uniqueKey = kvp.k.unique || false;
-			this.uniqueKey = this.keyName ? true : kvp.k.uniqueKey;
+		if(kvp) {
+			kvp.k = kvp.k || [];
+			kvp.v = kvp.v || [];
+			kvp.groupByKeyName = kvp.groupByKeyName || false;
 			this.keyIndex = 0;
-		}*/
+			this.uniqueKey = false;
+		}
 
 		// Support multiple attributes
 		if(typeof(attributeName) === 'string') { attributeName = [attributeName]; }
 		if(typeof(matchingExpression) === 'string') { matchingExpression = [matchingExpression]; }
 		if(typeof(matchingExpressionFlags) === 'string') { matchingExpressionFlags = [matchingExpressionFlags]; }
 
-		var res = kvp ? {} : [];
+		var res = [];
 
 		var kvpK = kvpKNext = kvpV = kvpVNext = tmp = null;
 
 		for(var i in fromStepData) { // loop through each element
 
 			var el = fromStepData[i];
-			var groupRes = {};
+
+			if(kvp && kvp.groupByKeyName && kvp.k.length > 0 && groupRes && Object.keys(groupRes).length > 0) {
+				if(self.groupResByKeyNameSatisfied(groupRes, kvp.k)) {
+					groupRes = {};
+				}
+			}
+			else {
+				var groupRes = {};
+			}
 
 			for(var j in attributeName) { // loop through desired attribute names
 
@@ -288,56 +306,77 @@ var commands = {
 					if(!re.test(el[attr])) { continue; }
 				}
 
-				// if we want a key value pair response
-				/*if(kvp && kvp.k.matchingExpression && kvp.v.matchingExpression) {
+				// key value pair stuff
+				if(kvp) {
+
+					kvp.k = kvp.k || [];
+					kvp.v = kvp.v || [];
+					if(typeof(kvp.k) === 'string') { kvp.k = [kvp.k]; }
+					if(typeof(kvp.v) === 'string') { kvp.v = [kvp.v]; }
 
 					if(kvpKNext) {
-						kvpK = self.keyName ? self.generateKey(self.keyName) : self.generateKey(el[attr]);
+						kvpK = typeof(kvpKNext) === 'string' ? self.generateKey(kvpKNext) : self.generateKey(el[attr]);
 						kvpKNext = false;
-						res = self.addKey(res, kvpK); 
-						continue;
+						groupRes = self.addKey(groupRes, kvpK); 
 					}
+					
 					if(kvpVNext) {
 						kvpV = el[attr];
 						kvpVNext = false;
-						res = self.addValue(res, kvpK, kvpV);
-						continue;
+						groupRes = self.addValue(groupRes, kvpK, kvpV);
 					}
 
-					if(!kvp.k.attributeName || attr == kvp.k.attributeName) {
-						var re = new RegExp(kvp.k.matchingExpression, kvp.k.matchingExpressionFlags);
-						if(re.test(el[attr])) {
-							if(kvp.k.mode == 'after') {
-								// flag the next attribute value as a key
-								kvpVNext = false;
-								kvpKNext = true;
-								continue;
+					for(var k in kvp.k) {
+
+						kvp.k[k].attributeName = kvp.k[k].attributeName || null;
+						kvp.k[k].matchingExpression = kvp.k[k].matchingExpression || null;
+						kvp.k[k].matchingExpressionFlags = kvp.k[k].matchingExpressionFlags || '';
+						kvp.k[k].name = kvp.k[k].name || null;
+						kvp.k[k].mode = kvp.k[k].mode || null;
+
+						if(attr == kvp.k[k].attributeName) {
+							var re = new RegExp(kvp.k[k].matchingExpression, kvp.k[k].matchingExpressionFlags);
+							if(re.test(el[attr])) {
+								if(kvp.k[k].mode == 'after') {
+									kvpKNext = kvp.k[k].name ? kvp.k[k].name : true;
+									kvpVNext = false;
+									break;
+								}
+								kvpK = kvp.k[k].name || self.generateKey(el[attr]);
+								groupRes = self.addKey(groupRes, kvpK);
+								break;
 							}
-							kvpK = self.keyName || self.generateKey(el[attr]);
 						}
+
 					}
-					if(!kvp.v.attributeName || attr == kvp.v.attributeName) {
-						var re = new RegExp(kvp.v.matchingExpression, kvp.v.matchingExpressionFlags);
-						if(re.test(el[attr])) {
-							if(kvp.v.mode == 'after') {
-								// flag the next attribute value as a value
-								kvpVNext = true;
-								kvpKNext = false;
-								continue;
+
+					for(var k in kvp.v) {
+
+						kvp.v[k].attributeName = kvp.v[k].attributeName || null;
+						kvp.v[k].matchingExpression = kvp.v[k].matchingExpression || null;
+						kvp.v[k].matchingExpressionFlags = kvp.v[k].matchingExpressionFlags || '';
+						kvp.v[k].name = kvp.v[k].name || null;
+						kvp.v[k].mode = kvp.v[k].mode || null;
+
+						if(attr == kvp.v[k].attributeName) {
+							var re = new RegExp(kvp.v[k].matchingExpression, kvp.v[k].matchingExpressionFlags);
+							if(re.test(el[attr])) {
+								if(kvp.v[k].mode == 'after') {
+									kvpKNext = false;
+									kvpVNext = true;
+									break;
+								}
+								kvpV = el[attr];
+								groupRes = self.addValue(groupRes, kvpK, kvpV);
+								break;
 							}
-							kvpV = el[attr];
 						}
+
 					}
 
-					if(kvpK) {
-						res = self.addKey(res, kvpK);
-						if(kvpV) {
-							res = self.addValue(res, kvpK, kvpV);
-						}
-					}
+				}
 
-				}*/
-
+				// no key value pair - flat response
 				if(!kvp) {
 					if(group) {
 						groupRes[attr] = el[attr];
@@ -347,12 +386,26 @@ var commands = {
 
 			}
 
-			// add the grouped response to the result if grouping is enabled
-			if(group && Object.keys(groupRes).length > 0) {
-				res.push(groupRes);
+			// add the grouped response to the result if grouping or kvp is enabled
+			if(Object.keys(groupRes).length > 0) {
+				if(group) {
+					res.push(groupRes);
+				}
+				if(kvp) {
+					if(kvp.groupByKeyName) {
+						if(self.groupResByKeyNameSatisfied(groupRes, kvp.k)) {
+							res.push(groupRes);
+						}
+					}
+					else {
+						res.push(groupRes);
+					}
+				}
 			}
 
 		}
+
+		console.log(res);
 
 		callback({data: res});
 
