@@ -1,0 +1,3 @@
+[submodule "lib/jexpr"]
+	path = lib/jexpr
+	url = https://azcn2503@bitbucket.org/azcn2503/jexpr.git
