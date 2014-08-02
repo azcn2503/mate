@@ -120,9 +120,9 @@ Be sure to start the application like this:
 ### Commands
 
 #### assert
-**data**: {`fromStep`, `fromIndex`, `operator`, `expected`}
+**data**: {`fromStep int`, `usingExpression array`, `operator string`, `expected mixed`}
 
-Assert that the data from step `fromStep[fromIndex]` matches the `expected` value compared by the `operator`. If `fromIndex` is not specified, it will assume that either you are asserting a non-array or non-object data set and assert a string, number, boolean etc., or, if the data set is an array or an object then it will iterate the entire array until it finds a match, and will return the index it matched at. You can force this setting by providing `*` as the `fromIndex` value. `fromIndex` can also be an array of keys so that you can assert many levels within a data set.
+Assert that the requested data matches the `expected` value compared by the `operator`.
 
 `operator` can be one of the following: `equal` compares if they are the same, `gt` compares if the actual is greater than the expected, `gte` compares if the actual is greater than or equal to the expected, `lt` compares if the actual is less than the expected, `lte` compares if the actual is less than or equal to the expected, `null` compares if the actual is null, `notnull` compares if the actual is not null, `contains` compares if the actual contains the expected value, `notcontains` compares if the actual does not contain the expected value, `inrange` checks if the data is within the range specified (use a string like "1-2" or "3-7")
 
@@ -520,13 +520,50 @@ Expected response might be: `body>div span.cool-class`
 ### Common Command Variables
 
 #### fromStep
+
 Used when grabbing results from a previous step. fromStep is an int that corresponds to the step number of the command results you wish to access.
 
 #### matchingExpression
+
 A string containing a regular expression that is used to test a set of results.
 
 #### matchingExpressionFlags
+
 Flags like "i", "im", "g", etc. to use with your regular expression in matchingExpression
 
 #### usingExpression
+
 A jexpr expression that returns a single level array of values from a mixed object/array. 
+
+Consider the following object:
+
+    {
+        "Name": "Aaron Cunnington",
+        "Address": {
+            "Street": "123 Super Road",
+            "City": "Metaville",
+            "Country": "Landtopia"
+        },
+        "Cool_Numbers": [
+            123,
+            1337,
+            42
+        ]
+    }
+
+Assuming this is the result data from step number 1, I could grab the Street by using the following expression: `["Address", "Street"]`. I could also access it with: `["/^A/", "/^S/"]`.
+
+I could get all numbers like this: `["Cool_Numbers", "*"]` and like this: `["/rs$/", "*"]` but also by specifying a 'range' using regular expressions like this: `["/l_n/i", "/[0-9]+/"]`
+
+Consider the following array:
+
+    [
+        { "Test": "Something" },
+        { "Test": "Something else" },
+        { "Test": "Some cool stuff" },
+        { "Things": "There are things here" }
+    ]
+
+I can grab the values of everything with this: `["*", "/^T/"]`, or just the first two objects like this: `["/[0-1]/"]` or their values like this: `["/[0-1]/", "*"]`.
+
+You can grab items when only their value matches an expression like this: `["*", "*", "/something/i"]` - this would return "Something", and "Something else".
