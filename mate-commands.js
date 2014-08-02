@@ -2,6 +2,8 @@ var webdriver = require('selenium-webdriver');
 var driver    = new webdriver.Builder().withCapabilities(webdriver.Capabilities.phantomjs()).build();
 var events    = require('events');
 var fs        = require('fs');
+var jexpr     = require('./lib/jexpr/jexpr.js');
+var vm        = require('vm');
 
 driver.manage().timeouts().implicitlyWait(1000);
 
@@ -167,32 +169,18 @@ var commands = {
 	'eval': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep;
+		var usingExpression = data[step].data.usingExpression || null;
 		var evalScript   = data[step].data.eval;
 		var fromStepData = data[fromStep].result.data;
+
+		if(usingExpression) {
+			fromStepData = jexpr(fromStepData, usingExpression);
+		}
 
 		evalScript = '(function() {' + evalScript + '}.bind(d))()';
 
 		var d = fromStepData;
 		var res = eval(evalScript);
-
-		callback({data: res});
-
-	},
-
-	'evalEach': function(data, step, callback) {
-
-		var fromStep     = data[step].data.fromStep;
-		var evalScript   = data[step].data.eval;
-		var fromStepData = data[fromStep].result.data;
-
-		var res = [];
-
-		evalScript = '(function() {' + evalScript + '}.bind(d))()';
-
-		for(var i in fromStepData) {
-			var d = fromStepData[i];
-			res.push(eval(evalScript));
-		}
 
 		callback({data: res});
 
@@ -442,14 +430,15 @@ var commands = {
 	'matchEach': function(data, step, callback) {
 
 		var fromStep                = data[step].data.fromStep; // required
-		var fromIndex               = data[step].data.fromIndex || 0;
-		var subIndex                = data[step].data.subIndex || null;
+		var usingExpression         = data[step].data.usingExpression || null;
 		var matchingExpression      = data[step].data.matchingExpression; // required
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 		var mode                    = data[step].data.mode || 'match';
 		var fromStepData            = data[fromStep].result.data;
-		if(fromIndex) { fromStepData = fromStepData[fromIndex]; }
-		if(typeof(subIndex) === 'string') { subIndex = [subIndex]; }
+
+		if(usingExpression) {
+			fromStepData = jexpr(fromStepData, usingExpression);
+		}
 
 		var res = [];
 
@@ -457,11 +446,6 @@ var commands = {
 
 		for(var i in fromStepData) {
 			var subject = fromStepData[i];
-			if(subIndex) {
-				for(var j in subIndex) {
-					subject = subject[subIndex[j]];
-				}
-			}
 			if(!re.test(subject)) { continue; }
 			if(mode == 'full') {
 				res.push(fromStepData[i]);
