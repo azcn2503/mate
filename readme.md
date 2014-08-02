@@ -188,7 +188,7 @@ Completes the campaign and ends the node process. You can optionally specify the
 ---
 
 #### eval
-**data**: { `fromStep`, `eval` }
+**data**: { `fromStep int`, `usingExpression array`, `eval string` }
 
 Evaluates JavaScript against a set of results returned by `getAttributeValues`. The result data takes the context of `this` when evaluated.
 
@@ -198,32 +198,12 @@ Example:
         "command": "evalEach",
         "data": {
             "fromStep": 1,
+            "usingExpression": ["*", "/^te/"],
             "eval": "return JSON.stringify(this);"
         }
     }
     
 Returns a JSON stringified array of the current set of results.
-
-Note that you cannot access file system, database or webdriver commands from an eval script.
-
-#### evalEach
-**data**: { `fromStep`, `eval` }
-
-Evaluates JavaScript against each item in a set of results returned by `getAttributeValues`. Each item takes the context of `this` when evaluated.
-
-Example:
-
-    {
-        "command": "evalEach",
-        "data": {
-            "fromStep": 1,
-            "eval": "return this.match(/[^/]*$/)[0]"
-        }
-    }
-    
-This will return only those attribute values that match the expression `[^/]*$`
-
-Note that you cannot access file system, database or webdriver commands from an eval script.
 
 ---
 
@@ -384,7 +364,7 @@ Key value pairing and grouping by key names can make working with related data m
 ---
 
 #### matchEach
-**data**: { `fromStep`, `matchingExpression`, [`matchingExpressionFlags = ''`, [`mode = 'match'`]] }
+**data**: { `fromStep int`, `matchingExpression string`, [`matchingExpressionFlags string = ''`, [`mode string = 'match'`, [`usingExpression array`]]] }
 
 Returns data when the expression defined by `matchingExpression` is satisfied. You can optionally specify regular expression flags with `matchingExpressionFlags`.
 
@@ -396,6 +376,7 @@ Example:
         "command": "matchEach",
         "data": {
             "fromStep": 1,
+            "usingExpression": ["*"],
             "matchingExpression": "an",
             "matchingExpressionFlags": "i",
             "mode": "full"
@@ -403,6 +384,8 @@ Example:
     }
     
 Returns the full value of data when the expression of `/an/i` is met.
+
+---
 
 #### open
 **data**: `string`
@@ -531,3 +514,19 @@ Example:
     }
 
 Expected response might be: `body>div span.cool-class`
+
+---
+
+### Common Command Variables
+
+#### fromStep
+Used when grabbing results from a previous step. fromStep is an int that corresponds to the step number of the command results you wish to access.
+
+#### matchingExpression
+A string containing a regular expression that is used to test a set of results.
+
+#### matchingExpressionFlags
+Flags like "i", "im", "g", etc. to use with your regular expression in matchingExpression
+
+#### usingExpression
+A jexpr expression that returns a single level array of values from a mixed object/array. 
