@@ -482,22 +482,29 @@ var commands = {
 
 		var res = [];
 
-		var repeatCallback = function(data) {
-			res.push(data);
-		};
-
-		for(var i = 0; i < repeatTimes; i++) {
-			for(var j in repeatSteps) {
-				if(isNaN(repeatSteps[j])) { continue; }
-
-				var repeatStep = repeatSteps[j];
-				var repeatCommand = data[repeatStep].command;
-				commands[repeatCommand](data, repeatStep, repeatCallback);
-
-			}
-		}
-
-		callback({success: true, data: res});
+		(function repeat(i, j) {
+			var self = this;
+			this.i = i || 0;
+			this.j = j || 0;
+			var repeatStep = repeatSteps[this.j];
+			var repeatCommand = data[repeatStep].command;
+			this.originalStep = data[repeatStep];
+			commands[repeatCommand](data, repeatStep, function repeatCallback(data) {
+				self.originalStep.result = data;
+				res.push(data);
+				if(self.j == repeatSteps.length - 1) {
+					if(self.i == repeatTimes - 1) {
+						callback({success: true, data: res});
+					}
+					else {
+						repeat(self.i + 1);
+					}
+				}
+				else {
+					repeat(self.i, self.j + 1);
+				}
+			});
+		})();
 
 	},
 
