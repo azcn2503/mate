@@ -72,7 +72,7 @@ var Mate = function() {
 
 			self.data[self.step].processed = self.data[self.step].processed || false;
 
-			if(self.data[self.step].processed && !self.forceRetry) {
+			if(self.data[self.step].setup || (self.data[self.step].processed && !self.forceRetry)) {
 				self.eventEmitter.emit('processNextCommand');
 				return;
 			}

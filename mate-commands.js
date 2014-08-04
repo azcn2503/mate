@@ -393,8 +393,6 @@ var commands = {
 
 		}
 
-		console.log(res);
-
 		callback({data: res});
 
 	},
@@ -476,10 +474,29 @@ var commands = {
 
 	'repeat': function(data, step, callback) {
 
-		var repeatStep    = data[step].data;
-		var repeatCommand = data[repeatStep].command;
+		data[step].data = data[step].data || {};
+		var repeatSteps = data[step].data.steps || step - 1; // default previous step
+		if(typeof(repeatSteps) !== 'object') { repeatSteps = [repeatSteps]; }
+		var repeatTimes = data[step].data.times || 1;
 
-		commands[repeatCommand](data, repeatStep, callback);
+		var res = [];
+
+		var repeatCallback = function(data) {
+			res.push(data);
+		};
+
+		for(var i = 0; i < repeatTimes; i++) {
+			for(var j in repeatSteps) {
+				if(isNaN(repeatSteps[j])) { continue; }
+
+				var repeatStep = repeatSteps[j];
+				var repeatCommand = data[repeatStep].command;
+				commands[repeatCommand](data, repeatStep, repeatCallback);
+
+			}
+		}
+
+		callback({success: true, data: res});
 
 	},
 
