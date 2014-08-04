@@ -27,35 +27,81 @@ var commands = {
 	'assert': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep || step - 1;
-		var fromIndex    = data[step].data.fromIndex || 0;
+		var usingExpression = data[step].data.usingExpression || null;
 		var recurse      = false;
 		var operator     = data[step].data.operator || 'equal';
 		var expected     = data[step].data.expected || null;
 		var fromStepData = data[fromStep].result.data || null;
 
-		if(typeof(fromStepData) === 'array' || typeof(fromStepData) === 'object') {
-			if(typeof(fromIndex) === 'array' || typeof(fromIndex) === 'object') {
-				for(var i in fromIndex) {
-					fromStepData = fromStepData[fromIndex[i]];
-				}
-			}
-			if(typeof(fromIndex) === 'number' || typeof(fromIndex) === 'string' && fromIndex != '*') {
-				fromStepData = fromStepData[fromIndex];
-			}
-			if(!fromIndex || fromIndex == '*') {
-				fromIndex = 0;
-				recurse = true;
-			}
+		if(usingExpression) {
+			fromStepData = jexpr(fromStepData, usingExpression);
 		}
 
-		var res = {
-			assert: false,
-			reason: {
-				message  : '',
-				expected : '',
-				actual   : '',
-				index    : null
+		this.assertItem = function(data, operator, expected) {
+
+			var res = {
+				assert: false,
+				reason: {
+					message  : '',
+					expected : '',
+					actual   : '',
+					index    : null
+				}
+			};
+
+			switch(operator) {
+
+				case 'equal':
+					if(data == expected) { res.assert = true; }
+				break;
+
+				case 'gt':
+					if(data > expected) { res.assert = true; }
+				break;
+
+				case 'gte':
+					if(data >= expected) { res.assert = true; }
+				break;
+
+				case 'lt':
+					if(data < expected) { res.assert = true; }
+				break;
+
+				case 'lte':
+					if(data <= expected) { res.assert = true; }
+				break;
+
+				case 'null':
+					if(data === null) { res.assert = true; }
+				break;
+
+				case 'notnull':
+					if(data !== null) { res.assert = true; }
+				break;
+
+				case 'contains':
+					if(data.indexOf(expected) != -1) { res.assert = true; }
+				break;
+
+				case 'notcontains':
+					if(data.indexOf(expected) == -1) { res.assert = true; }
+				break;
+
+				case 'inrange':
+					var range = expected.split('-');
+					var lower = parseInt(range[0]);
+					var upper = parseInt(range[1]);
+					if(data >= lower && data <= upper) { res.assert = true; }
+				break;
+
 			}
+
+			res.reason.expected = aliases[operator] + ' ' + expected;
+			res.reason.actual   = data;
+			res.reason.message  = res.assert ? 'pass' : 'fail';
+
+			return res;
+
 		};
 
 		var aliases = {
@@ -73,70 +119,25 @@ var commands = {
 
 		var tmpData = null;
 
-		do {
+		if(typeof(fromStepData) === 'object' || typeof(fromStepData) === 'array') {
 
-			var tmpData = recurse ? fromStepData[fromIndex] : fromStepData;
+			for(var i in fromStepData) {
 
-			if(expected == null || tmpData == null) {
-				res = false;
-				break;
-			}
+				res = this.assertItem(fromStepData[i], operator, expected);
 
-			switch(operator) {
-
-				case 'equal':
-					if(tmpData == expected) { res.assert = true; }
-				break;
-
-				case 'gt':
-					if(tmpData > expected) { res.assert = true; }
-				break;
-
-				case 'gte':
-					if(tmpData >= expected) { res.assert = true; }
-				break;
-
-				case 'lt':
-					if(tmpData < expected) { res.assert = true; }
-				break;
-
-				case 'lte':
-					if(tmpData <= expected) { res.assert = true; }
-				break;
-
-				case 'null':
-					if(tmpData === null) { res.assert = true; }
-				break;
-
-				case 'notnull':
-					if(tmpData !== null) { res.assert = true; }
-				break;
-
-				case 'contains':
-					if(tmpData.indexOf(expected) != -1) { res.assert = true; }
-				break;
-
-				case 'notcontains':
-					if(tmpData.indexOf(expected) == -1) { res.assert = true; }
-				break;
-
-				case 'inrange':
-					var range = expected.split('-');
-					var lower = parseInt(range[0]);
-					var upper = parseInt(range[1]);
-					if(tmpData >= lower && tmpData <= upper) { res.assert = true; }
-				break;
+				if(res.assert) { break; }
 
 			}
 
-			res.reason.expected = aliases[operator] + ' ' + expected;
-			res.reason.actual   = tmpData;
-			res.reason.message  = res.assert ? 'pass' : 'fail';
-			res.reason.index    = fromIndex;
+		}
 
-			fromIndex++;
+		else {
 
-		} while(!res.assert && recurse && fromIndex < fromStepData.length - 1);
+			console.log('just one');
+
+			res = this.assertItem(fromStepData, operator, expected);
+
+		}
 
 		callback({data: res});
 
