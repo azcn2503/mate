@@ -220,19 +220,91 @@ var commands = {
 
 	'extractTable': function(data, step, callback) {
 
-		var fromStep = data[step].data.fromStep;
-		var usingExpression = data[step].data.usingExpression || null;
-		var fromStepData = data[fromStep].result.data;
-		fromStepData = usingExpression ? jexpr(fromStepData, usingExpression) : usingExpression;
-
 		var selector = data[step].data.selector || 'table';
-		var options = data[step].data.options || {};
+		var options = data[step].data.options || {colMode: 'auto', headings: 'auto', output: 'json'};
 
 		var evalExtractTable = function(selector, options) {
 
+			var selector = selector || 'table';
+			var options = options || {};
+			options.colMode = options.colMode || 'auto'; // auto, th
+			options.headings = options.headings || 'auto'; // auto, [heading1, heading2, ...]
+			options.output = options.output || 'json'; // json, csv
+
+			var table = document.querySelector(selector);
+
+			var headings = options.headings == 'auto' ? [] : options.headings;
+			var content = [];
+			var cells = 0;
+			var rows = 0;
+			var cols = 0;
+
+			var tr = table.querySelectorAll('tr');
+			for (var i in tr) {
+				if (!tr[i] || !tr.hasOwnProperty(i)) {
+					continue;
+				}
+				if(!tr[i].querySelectorAll) { continue; }
+				rows++;
+				if (headings.length == 0 && options.headings == 'auto') {
+					var th = tr[i].querySelectorAll('th');
+					for (var j in th) {
+						if (!th[j] || !th.hasOwnProperty(j) || !th[j].innerText) {
+							continue;
+						}
+						cells++;
+						headings.push(th[j].innerText);
+					}
+				}
+				var td = tr[i].querySelectorAll('td');
+				for (var j in td) {
+					if (!td[j] || !td.hasOwnProperty(j) || !td[j].innerText) {
+						continue;
+					}
+					cells++;
+					content.push(td[j].innerText);
+				}
+			}
+
+			if (options.colMode == 'auto') {
+				cols = Math.round(cells / rows);
+			}
+			if (options.colMode == 'th') {
+				cols = headings.length;
+			}
+
+			if (options.output == 'json') {
+				var res = [];
+				for (var i = 0; i < content.length; i += cols) {
+					var tmpData = content.slice(i, i + cols);
+					for (var j in tmpData) {
+						res.push({
+							th: headings[j],
+							td: tmpData[j]
+						});
+					}
+				}
+				return res;
+			}
+
+			if (options.output == 'csv') {
+				var csv = '';
+				csv += headings.join(',');
+				for (var i = 0; i < content.length; i += cols) {
+					var tmpData = content.slice(i, i + cols)
+					csv += '\n' + tmpData.join(',');
+				}
+				return csv;
+			}
+
 		};
 
-		callback({success: false});
+		driver.executeScript(evalExtractTable, selector, options).then(function success(data) {
+			callback({success: true, data: data});
+		}).then(null, function error(res) {
+			console.log(res);
+			callback({success: false});
+		});
 
 	},
 

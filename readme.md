@@ -402,18 +402,55 @@ Example:
 ---
 
 #### repeat
-**data**: `number`
+**data**: {`steps array`, `times int`}
 
-Repeats the command defined by the step index number.
+Repeats the commands in the `steps` array by the `times` integer. The result data from all the repeated commands will be grouped in to one large result response in the repeat command instead of in each individual command.
 
 Example:
 
     {
         "command": "repeat",
-        "data": 2
+        "data": {
+            "steps": [1, 2],
+            "times": 2
+        }
     }
     
-Repeats command 2.
+Repeats commands 1 and 2 twice - they will execute in the order 1, 2, 1, 2.
+
+You may wish to not perform the initial execution of a task being set up for repetition so that you can group up your data in the reply command. To do this, you can mark a command for 'setup only' by doing something like this:
+
+    {
+        "command: "click",
+        "data": "input[type=button].next"
+    },
+    {
+        "command": "selectAll",
+        "data": "div.results"
+    },
+    {
+        "command": "getAttributeValues",
+        "data": {
+            "fromStep": 3,
+            "attributeName": "innerText"
+        }
+    },
+    {
+        "command": "repeat",
+        "data": {
+            "steps": [1, 2, 3],
+            "times": 10
+        }
+    },
+    {
+        "command": "save",
+        "data": {
+            "fromStep": 4,
+            "fileName": "grouped-response"
+        }
+    }
+
+Repeats the click, selectAll and getAttributeValues commands ten times, then saves all their data.
 
 ---
 
