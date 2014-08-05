@@ -4,6 +4,8 @@ var events    = require('events');
 var fs        = require('fs');
 var jexpr     = require('./lib/jexpr/jexpr.js');
 var vm        = require('vm');
+var nodemailer = require('nodemailer');
+var transporter = nodemailer.createTransport();
 
 driver.manage().timeouts().implicitlyWait(1000);
 
@@ -167,6 +169,35 @@ var commands = {
 
 	},
 
+	'email': function(data, step, callback) {
+
+		var fromStep = data[step].data.fromStep;
+		var usingExpression = data[step].data.usingExpression || null;
+		var fromStepData = data[fromStep].result.data;
+
+		if(usingExpression) {
+			fromStepData = jexpr(fromStepData, usingExpression);
+		}
+
+		var mailOptions = {
+			from: 'mate <azcn2503@gmail.com>',
+			to: data[step].data.to || 'azcn2503@gmail.com',
+			subject: data[step].data.subject || 'mate results',
+			text: JSON.stringify(fromStepData),
+			html: '<h1>mate results</h1><p style="font-family: monospace; padding: 5px; background-color: #ddd;">' + JSON.stringify(fromStepData) + '</p>'
+		};
+
+		transporter.sendMail(mailOptions, function(error, info) {
+			if(error) {
+				callback({success: false});
+			}
+			else {
+				callback({success: true});
+			}
+		});
+
+	},
+
 	'eval': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep;
@@ -184,6 +215,24 @@ var commands = {
 		var res = eval(evalScript);
 
 		callback({data: res});
+
+	},
+
+	'extractTable': function(data, step, callback) {
+
+		var fromStep = data[step].data.fromStep;
+		var usingExpression = data[step].data.usingExpression || null;
+		var fromStepData = data[fromStep].result.data;
+		fromStepData = usingExpression ? jexpr(fromStepData, usingExpression) : usingExpression;
+
+		var selector = data[step].data.selector || 'table';
+		var options = data[step].data.options || {};
+
+		var evalExtractTable = function(selector, options) {
+
+		};
+
+		callback({success: false});
 
 	},
 
