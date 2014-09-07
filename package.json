@@ -5,7 +5,8 @@
   "main": "main.js",
   "dependencies": {
     "mongodb": "~1.4.7",
-    "selenium-webdriver": "~2.42.1"
+    "selenium-webdriver": "~2.42.1",
+    "nodemailer": "~1.2.2"
   },
   "devDependencies": {},
   "scripts": {
@@ -17,5 +18,5 @@
     "url": "https://azcn2503@bitbucket.org/azcn2503/mateserver.git"
   },
   "author": "Aaron Cunnington",
-  "license": "BSD-2-Clause"
+  "license": "BSD-2-Clause",
 }
