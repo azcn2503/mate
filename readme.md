@@ -207,6 +207,39 @@ Returns a JSON stringified array of the current set of results.
 
 ---
 
+#### extractTable
+**data**: { `selector string`, `options object` }
+
+Extracts content from a table defined by the CSS selector and can output it in JSON or CSV format. It accepts the following settings for options:
+
+**colMode** defines the method used for counting the number of columns in the table. This defaults to 'auto' which will try to automatically work out the number of columns based on the structure of the table. You can also set it to 'th' which will simply count the number of table headings (it will only count the first occurrence of headings).
+
+**headings** defines the actual headings. The default is 'auto' which will use the content from the table headings. You can set it to an array of strings that will overwrite any detected headings.
+
+**output** defines the output format of the table content. It defaults to 'json' but you can also set it to 'csv'. It is trivial for you to be able to save the content using the save command in csv format and open it in your favourite spreadsheet editor.
+
+The following code will extract a table called 'products', will use the headings 'Product Name' and 'Product Price', and will return the content as a csv file. Assuming it is step 1, we can save the output to a file for later:
+
+    {
+        "command": "extractTable",
+        "data": {
+            "selector": "table#products",
+            "options": {
+                "headings": ["Product Name", "Product Price"],
+                "output": "csv"
+            }
+        }
+    },
+    {
+        "command": "save",
+        "data": {
+            "fromStep": 1,
+            "fileName": "products.csv"
+        }
+    }
+
+---
+
 #### getAttributeValues
 **data**: { `fromStep int`, `attributeName mixed`, [`matchingExpression mixed`, [`matchingExpressionFlags mixed`, [`kvp mixed`]]] }
 
