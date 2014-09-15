@@ -3,8 +3,8 @@
 ## Prerequisites
 
 * Selenium Server
-* Node
-    * Requires NPM packages: mongodb, events, fs, selenium-webdriver
+* PhantomJS
+* Node (make sure to install the dependencies!)
     
 ## Usage
 

@@ -6,6 +6,7 @@ var jexpr     = require('./lib/jexpr/jexpr.js');
 var vm        = require('vm');
 var nodemailer = require('nodemailer');
 var transporter = nodemailer.createTransport();
+var mkdirp = require('mkdirp');
 
 driver.manage().timeouts().implicitlyWait(1000);
 
@@ -16,7 +17,7 @@ var commands = {
 		driver.switchTo().alert().then( function success(alert) {
 			alert.getText().then( function success(text) {
 				alert.accept();
-				callback({data: text});
+				callback({success: true, data: text});
 			}).then(null, function error() {
 				callback({success: false});
 			});
@@ -48,7 +49,8 @@ var commands = {
 					expected : '',
 					actual   : '',
 					index    : null
-				}
+				},
+				success: true
 			};
 
 			switch(operator) {
@@ -214,7 +216,7 @@ var commands = {
 		var d = fromStepData;
 		var res = eval(evalScript);
 
-		callback({data: res});
+		callback({data: res, success: true});
 
 	},
 
@@ -515,14 +517,14 @@ var commands = {
 
 		}
 
-		callback({data: res});
+		callback({success: true, data: res});
 
 	},
 
 	'getCurrentURL': function(data, step, callback) {
 
 		driver.getCurrentUrl().then(function success(url) {
-			callback({data: url});
+			callback({success: true, data: url});
 		});
 
 	},
@@ -530,7 +532,7 @@ var commands = {
 	'getWindowHandle': function(data, step, callback) {
 
 		driver.getWindowHandle().then(function success(handle) {
-			callback({data: handle});
+			callback({success: true, data: handle});
 		}).then(null, function error() {
 			callback({success: false});
 		});
@@ -540,7 +542,7 @@ var commands = {
 	'getWindowHandles': function(data, step, callback) {
 
 		driver.getAllWindowHandles().then(function success(handles) {
-			callback({data: handles});
+			callback({success: true, data: handles});
 		}).then(null, function error() {
 			callback({success: false});
 		});
@@ -578,7 +580,7 @@ var commands = {
 			}
 		}
 
-		callback({data: res});
+		callback({success: true, data: res});
 
 	},
 
@@ -658,13 +660,23 @@ var commands = {
 		if(fileType == 'json') { saveData = JSON.stringify(fromStepData, null, '\t'); }
 		else { saveData = fromStepData; }
 
-		fs.writeFileSync(fileName, saveData, {'encoding': 'utf-8'});
-
-		callback({
-			data: {
-				'success': true,
-				'fileName': fileName
+		mkdirp('commands/save', function(err) {
+			if(err) { 
+				callback({
+					data: {
+						error: err
+					},
+					success: false
+				});
+				return;
 			}
+			fs.writeFileSync(fileName, saveData, {'encoding': 'utf-8'});
+			callback({
+				data: {
+					'fileName': fileName
+				},
+				success: true
+			});
 		});
 
 	},
@@ -676,12 +688,19 @@ var commands = {
 		fileName = fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0') + '.png';
 		fileName = 'commands/screenshot/' + fileName;
 
-		driver.takeScreenshot().then( function(data) {
-			fs.writeFileSync(fileName, data, {'encoding': 'base64'});
-			callback({
-				data: {
-					'filename': fileName
-				}
+		mkdirp('commands/screenshot', function(err) {
+			if(err) {
+				callback({success: false, error: err});
+				return;
+			}
+			driver.takeScreenshot().then( function success(data) {
+				fs.writeFileSync(fileName, data, {'encoding': 'base64'});
+				callback({
+					data: {
+						'filename': fileName
+					},
+					success: true
+				});
 			});
 		});
 
@@ -759,11 +778,12 @@ var commands = {
 		this.eventEmitter.on('done', function(scrollTop) {
 
 			prevScrollTop = scrollTop;
-			if(callback) { callback({
+			callback({
 				data: {
 					'scrollTop': scrollTop
-				}
-			}); }
+				},
+				success: true
+			});
 			return;
 
 		});
@@ -844,7 +864,8 @@ var commands = {
 
 				driver.executeScript(evalSelect, selector).then( function success(nativeEl) {
 					callback({
-						data: JSON.parse(nativeEl)
+						data: JSON.parse(nativeEl),
+						success: true
 					});
 				}).then(null, function error() {
 					callback({success: false});
@@ -922,7 +943,8 @@ var commands = {
 
 				driver.executeScript(evalSelectAll, selector).then( function success(nativeEls) {
 					callback({
-						data: JSON.parse(nativeEls)
+						data: JSON.parse(nativeEls),
+						success: true
 					});
 				}).then(null, function error() {
 					callback({success: false})

@@ -2,6 +2,7 @@ var db       = require('mongodb');
 var events   = require('events');
 var fs       = require('fs');
 var commands = require('./mate-commands').commands;
+var mkdirp = require('mkdirp');
 var args     = process.argv;
 if(args.length < 3) { process.exit(); }
 
@@ -37,7 +38,13 @@ var Mate = function() {
 			var content = JSON.stringify(self.data, null, '\t');
 			var fileName = fileName || self.campaign.id + '-' + Date.now() + Math.random().toString().replace(/\./, '0') + '.json';
 
-			fs.writeFileSync(fileName, content, {'encoding': 'utf-8'});
+			mkdirp('output', function(err) {
+				if(err) {
+					console.log('There was an error saving the campaign: ' + err);
+					return;
+				}
+				fs.writeFileSync(fileName, content, {'encoding': 'utf-8'});
+			});
 
 		});
 
