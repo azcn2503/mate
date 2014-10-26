@@ -543,6 +543,13 @@ Will try to scroll infinitely for three minutes without exception.
 
 ---
 
+#### search
+**data**: `Search text`
+
+Finds an element on the page called `input[type=text][name=q]`, types your search query in to it, then presses the return key to complete the search. Should work on most search engines.
+
+---
+
 #### select
 **data**: `CSS Selector string`
 

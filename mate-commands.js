@@ -811,6 +811,19 @@ var commands = {
 
 	},
 
+	'search': function(data, step, callback) {
+
+		var searchText = data[step].data || 'mate';
+		data[step].data = {};
+		data[step].data.selector = 'input[type=text][name=q]';
+		data[step].data.string = searchText + webdriver.Key.RETURN;
+
+		console.log(data);
+
+		commands.sendKeys(data, step, callback);
+
+	},
+
 	'select': function(data, step, callback) {
 
 		var selector = data[step].data || 'body';
@@ -976,9 +989,11 @@ var commands = {
 		var selector = data.selector;
 		var string = data.string;
 
-		driver.findElement(webdriver.By.css(selector)).sendKeys(string);
-
-		callback({success: true});
+		driver.findElement(webdriver.By.css(selector)).sendKeys(string).then( function success() {
+			callback({success: true});
+		}).then(null, function error(message) {
+			callback({success: false});
+		});
 
 	},
 
