@@ -223,13 +223,13 @@ var commands = {
 	'extractTable': function(data, step, callback) {
 
 		var selector = data[step].data.selector || 'table';
-		var options = data[step].data.options || {colMode: 'auto', headings: 'auto', output: 'json'};
+		var options = data[step].data.options || {colCountMode: 'auto', headings: 'auto', output: 'json'};
 
 		var evalExtractTable = function(selector, options) {
 
 			var selector = selector || 'table';
 			var options = options || {};
-			options.colMode = options.colMode || 'auto'; // auto, th
+			options.colCountMode = options.colCountMode || 'auto'; // auto, th
 			options.headings = options.headings || 'auto'; // auto, [heading1, heading2, ...]
 			options.output = options.output || 'json'; // json, csv
 
@@ -268,10 +268,10 @@ var commands = {
 				}
 			}
 
-			if (options.colMode == 'auto') {
+			if (options.colCountMode == 'auto') {
 				cols = Math.round(cells / rows);
 			}
-			if (options.colMode == 'th') {
+			if (options.colCountMode == 'th') {
 				cols = headings.length;
 			}
 
@@ -879,7 +879,8 @@ var commands = {
 
 			}
 
-		}).then(null, function error() {
+		}).then(null, function error(message) {
+			console.log(message);
 			callback({success: false});
 		});
 

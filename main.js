@@ -23,6 +23,8 @@ var Mate = function() {
 	this.eventEmitter = new events.EventEmitter();
 	this.forceRetry   = false;
 
+	this.stepNames = {};
+
 	this.args = {};
 
 	this.setCampaign = function(campaign) {
@@ -77,38 +79,51 @@ var Mate = function() {
 
 		self.eventEmitter.on('processCommand', function() {
 
-			self.data[self.step].processed = self.data[self.step].processed || false;
+			var currentStep = self.data[self.step];
 
-			if(self.data[self.step].setup || (self.data[self.step].processed && !self.forceRetry)) {
+			currentStep.processed = currentStep.processed || false;
+
+			if(currentStep.setup || (currentStep.processed && !self.forceRetry)) {
 				self.eventEmitter.emit('processNextCommand');
 				return;
 			}
 
-			self.data[self.step].data = self.data[self.step].data || null;
-			self.data[self.step].waiting = true;
-			self.data[self.step].step = self.step;
-			self.data[self.step].performance = {
+			currentStep.data = currentStep.data || null;
+			currentStep.waiting = true;
+			currentStep.step = self.step;
+			currentStep.performance = {
 				'start': Date.now(),
 				'end': null
 			};
-			if(self.data[self.step].command == 'done') {
-				self.data[self.step]._id = self.campaign.id;
+			if(currentStep.command == 'done') {
+				currentStep._id = self.campaign.id;
+			}
+
+			if(currentStep.name) {
+				self.stepNames[currentStep.name] = self.step;
 			}
 
 			//self.eventEmitter.emit('save', self.fileName);
 			
-			if(self.data[self.step].description) {
-				console.log('Description: ', self.data[self.step].description);
+			if(currentStep.description) {
+				console.log('Description: ', currentStep.description);
 			}
-			console.log('Command:     ', self.data[self.step].command);
-			console.log('Data:        ', self.data[self.step].data);
+			console.log('Command:     ', currentStep.command);
+			console.log('Data:        ', currentStep.data);
 
-			if(!commands[self.data[self.step].command]) {
+			if(!commands[currentStep.command]) {
 				process.exit();
 				return;
 			}
 
-			commands[self.data[self.step].command](self.data, self.step, function(res) {
+			// replace the fromStep name with the real fromStep index
+			if(currentStep.data && currentStep.data.fromStep && typeof(currentStep.data.fromStep) == 'string') {
+				if(self.stepNames[currentStep.data.fromStep]) {
+					currentStep.data.fromStep = self.stepNames[currentStep.data.fromStep];
+				}
+			}
+
+			commands[currentStep.command](self.data, self.step, function(res) {
 				self.eventEmitter.emit('commandProcessed', res);
 			});
 

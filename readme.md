@@ -20,7 +20,8 @@ Check out the following `soundcloud.json` file:
         },
         {
             "command": "selectAll",
-            "data": "a.userAvatarBadge__usernameLink"
+            "data": "a.userAvatarBadge__usernameLink",
+            "name": "selectAllUsernameLinks"
         },
         {
             "command": "getAttributeValues",
@@ -62,7 +63,9 @@ Every step must have a `command` string, and optionally a mixed `data` object, l
         "data": "www.google.com"
     }
 
-Some commands require that `data` be an object with mixed content, like the `getAttributeValues` command.
+Some commands require that `data` be an object with mixed content, like the `getAttributeValues` command
+
+Steps that require data from previously executed steps will allow a `fromStep` property, you can follow this with either the step number (first step is 0, second step is 1, etc.) or alternatively if you have named your step you can simply use the step name! In the soundcloud example above, you could use `"selectAllUsernameLinks"` instead of `2` in the `getAttributeValues` command.
 
 When a campaign file is saved it will save additional information against each step, like so:
 
@@ -71,7 +74,7 @@ When a campaign file is saved it will save additional information against each s
         "data": "www.google.com",
         "performance": {
             "start": 123456789,
-            "end": 123456789
+            "end": 123456790
         },
         "result": {
             "success": true
@@ -212,7 +215,7 @@ Returns a JSON stringified array of the current set of results.
 
 Extracts content from a table defined by the CSS selector and can output it in JSON or CSV format. It accepts the following settings for options:
 
-**colMode** defines the method used for counting the number of columns in the table. This defaults to 'auto' which will try to automatically work out the number of columns based on the structure of the table. You can also set it to 'th' which will simply count the number of table headings (it will only count the first occurrence of headings).
+**colCountMode** defines the method used for counting the number of columns in the table. This defaults to 'auto' which will try to automatically work out the number of columns based on the structure of the table. You can also set it to 'th' which will simply count the number of table headings (it will only count the first occurrence of headings).
 
 **headings** defines the actual headings. The default is 'auto' which will use the content from the table headings. You can set it to an array of strings that will overwrite any detected headings.
 
