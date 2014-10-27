@@ -34,10 +34,10 @@ var commands = {
 		var recurse      = false;
 		var operator     = data[step].data.operator || 'equal';
 		var expected     = data[step].data.expected || null;
-		var fromStepData = data[fromStep].result.data || null;
+		var resultData = data[fromStep].result.data || null;
 
 		if(usingExpression) {
-			fromStepData = jexpr(fromStepData, usingExpression);
+			resultData = jexpr(resultData, usingExpression);
 		}
 
 		this.assertItem = function(data, operator, expected) {
@@ -123,11 +123,11 @@ var commands = {
 
 		var tmpData = null;
 
-		if(typeof(fromStepData) === 'object' || typeof(fromStepData) === 'array') {
+		if(typeof(resultData) === 'object' || typeof(resultData) === 'array') {
 
-			for(var i in fromStepData) {
+			for(var i in resultData) {
 
-				res = this.assertItem(fromStepData[i], operator, expected);
+				res = this.assertItem(resultData[i], operator, expected);
 
 				if(res.assert) { break; }
 
@@ -139,7 +139,7 @@ var commands = {
 
 			console.log('just one');
 
-			res = this.assertItem(fromStepData, operator, expected);
+			res = this.assertItem(resultData, operator, expected);
 
 		}
 
@@ -175,18 +175,18 @@ var commands = {
 
 		var fromStep = data[step].data.fromStep;
 		var usingExpression = data[step].data.usingExpression || null;
-		var fromStepData = data[fromStep].result.data;
+		var resultData = data[fromStep].result.data;
 
 		if(usingExpression) {
-			fromStepData = jexpr(fromStepData, usingExpression);
+			resultData = jexpr(resultData, usingExpression);
 		}
 
 		var mailOptions = {
 			from: 'mate <azcn2503@gmail.com>',
 			to: data[step].data.to || 'azcn2503@gmail.com',
 			subject: data[step].data.subject || 'mate results',
-			text: JSON.stringify(fromStepData),
-			html: '<h1>mate results</h1><p style="font-family: monospace; padding: 5px; background-color: #ddd;">' + JSON.stringify(fromStepData) + '</p>'
+			text: JSON.stringify(resultData),
+			html: '<h1>mate results</h1><p style="font-family: monospace; padding: 5px; background-color: #ddd;">' + JSON.stringify(resultData) + '</p>'
 		};
 
 		transporter.sendMail(mailOptions, function(error, info) {
@@ -205,15 +205,15 @@ var commands = {
 		var fromStep     = data[step].data.fromStep;
 		var usingExpression = data[step].data.usingExpression || null;
 		var evalScript   = data[step].data.eval;
-		var fromStepData = data[fromStep].result.data;
+		var resultData = data[fromStep].result.data;
 
 		if(usingExpression) {
-			fromStepData = jexpr(fromStepData, usingExpression);
+			resultData = jexpr(resultData, usingExpression);
 		}
 
 		evalScript = '(function() {' + evalScript + '}.bind(d))()';
 
-		var d = fromStepData;
+		var d = resultData;
 		var res = eval(evalScript);
 
 		callback({data: res, success: true});
@@ -371,9 +371,9 @@ var commands = {
 		var kvp                     = data[step].data.kvp || null;
 		var returnType              = data[step].data.returnType || 'array';
 		var group                   = data[step].data.group || false;
-		var fromStepData            = data[fromStep].result.data;
+		var resultData            = data[fromStep].result.data;
 
-		//if(typeof(fromStepData) === 'object') { fromStepData = [fromStepData]; }
+		//if(typeof(resultData) === 'object') { resultData = [resultData]; }
 
 		// key value pair settings
 		if(kvp) {
@@ -393,9 +393,9 @@ var commands = {
 
 		var kvpK = kvpKNext = kvpV = kvpVNext = tmp = null;
 
-		for(var i in fromStepData) { // loop through each element
+		for(var i in resultData) { // loop through each element
 
-			var el = fromStepData[i];
+			var el = resultData[i];
 
 			if(kvp && kvp.groupByKeyName && kvp.k.length > 0 && groupRes && Object.keys(groupRes).length > 0) {
 				if(self.groupResByKeyNameSatisfied(groupRes, kvp.k)) {
@@ -556,21 +556,21 @@ var commands = {
 		var matchingExpression      = data[step].data.matchingExpression; // required
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 		var mode                    = data[step].data.mode || 'match';
-		var fromStepData            = data[fromStep].result.data;
+		var resultData            = data[fromStep].result.data;
 
 		if(usingExpression) {
-			fromStepData = jexpr(fromStepData, usingExpression);
+			resultData = jexpr(resultData, usingExpression);
 		}
 
 		var res = [];
 
 		var re = new RegExp(matchingExpression, matchingExpressionFlags);
 
-		for(var i in fromStepData) {
-			var subject = fromStepData[i];
+		for(var i in resultData) {
+			var subject = resultData[i];
 			if(!re.test(subject)) { continue; }
 			if(mode == 'full') {
-				res.push(fromStepData[i]);
+				res.push(resultData[i]);
 			}
 			if(mode == 'array') {
 				res.push(subject.match(re));
@@ -634,31 +634,22 @@ var commands = {
 	'save': function(data, step, callback) {
 
 		var fromStep     = data[step].data.fromStep;
-		var fromIndex    = data[step].data.fromIndex || 0;
+		var usingExpression = data[step].data.usingExpression || null;
 		var fileName     = data[step].data.fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0');
 		var fileType     = data[step].data.fileType || 'json';
-		var fromStepData = data[fromStep].result.data;
+		var resultData = data[fromStep].result.data;
+
+		if(usingExpression) {
+			resultData = jexpr(resultData, usingExpression);
+		}
 
 		fileName = fileName.replace(/[\/\\\<\>\|\":?*]/g, '-');
-
-		if(typeof(fromStepData) === 'array' || typeof(fromStepData) === 'object') {
-			if(typeof(fromIndex) === 'array' || typeof(fromIndex) === 'object') {
-				for(var i in fromIndex) {
-					fromStepData = fromStepData[fromIndex[i]] || fromStepData;
-				}
-			}
-			else {
-				if(fileType != 'json') {
-					fromStepData = fromStepData[fromIndex];
-				}
-			}
-		}
 
 		fileName = 'commands/save/' + fileName + '.' + fileType;
 
 		var saveData = '';
-		if(fileType == 'json') { saveData = JSON.stringify(fromStepData, null, '\t'); }
-		else { saveData = fromStepData; }
+		if(fileType == 'json') { saveData = JSON.stringify(resultData, null, '\t'); }
+		else { saveData = resultData; }
 
 		mkdirp('commands/save', function(err) {
 			if(err) { 
@@ -815,10 +806,8 @@ var commands = {
 
 		var searchText = data[step].data || 'mate';
 		data[step].data = {};
-		data[step].data.selector = 'input[type=text][name=q]';
+		data[step].data.selector = 'input[name=q]';
 		data[step].data.string = searchText + webdriver.Key.RETURN;
-
-		console.log(data);
 
 		commands.sendKeys(data, step, callback);
 
