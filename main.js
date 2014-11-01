@@ -1,3 +1,4 @@
+var crypto = require('crypto');
 var db       = require('mongodb');
 var events   = require('events');
 var fs       = require('fs');
@@ -18,7 +19,7 @@ var Mate = function() {
 	};
 	
 	this.fileName     = '';
-	this.data         = [];
+	this.sourceData = [];
 	this.step         = 0;
 	this.eventEmitter = new events.EventEmitter();
 	this.forceRetry   = false;
@@ -55,15 +56,16 @@ var Mate = function() {
 			self.fileName = self.campaign.id + '.json';
 			var content = fs.readFileSync(self.fileName, {'encoding': 'utf-8'});
 
-			// Use mustache style replacements in the control file
-			if(Object.keys(self.args).length != 0) {
-				for(var i in self.args) {
-					var regexp = new RegExp('{{args\.' + i + '}}', 'g');
-					content = content.replace(regexp, self.args[i]);
+			var newData = JSON.parse(content);
+			self.data = self.data || newData;
+
+			// Find out if the commands have changed by comparing their content
+			for(var i in newData) {
+				if(i >= self.data.length) { self.data[i] = newData[i]; continue; }
+				if(newData[i].command != self.data[i].command || JSON.stringify(newData[i].data) != JSON.stringify(self.data[i].data)) {
+					self.data[i] = newData[i];
 				}
 			}
-
-			self.data = JSON.parse(content);
 			
 			self.step = 0;
 			self.eventEmitter.emit('processCommand');
@@ -73,59 +75,69 @@ var Mate = function() {
 		self.eventEmitter.on('retry', function() {
 
 			self.step = 0;
-			self.eventEmitter.emit('processCommand');
+			self.eventEmitter.emit('load');
 
 		});
 
 		self.eventEmitter.on('processCommand', function() {
 
-			var currentStep = self.data[self.step];
+			var currentCommand = self.data[self.step];
 
-			currentStep.processed = currentStep.processed || false;
+			currentCommand.processed = currentCommand.processed || false;
 
-			if(currentStep.setup || (currentStep.processed && !self.forceRetry)) {
+			if(currentCommand.setup || (currentCommand.processed && !self.forceRetry)) {
 				self.eventEmitter.emit('processNextCommand');
 				return;
 			}
 
-			currentStep.data = currentStep.data || null;
-			currentStep.waiting = true;
-			currentStep.step = self.step;
-			currentStep.performance = {
+			currentCommand.data = currentCommand.data || null;
+			currentCommand.waiting = true;
+			currentCommand.step = self.step;
+			currentCommand.performance = {
 				'start': Date.now(),
 				'end': null
 			};
-			if(currentStep.command == 'done') {
-				currentStep._id = self.campaign.id;
+			if(currentCommand.command == 'done') {
+				currentCommand._id = self.campaign.id;
 			}
 
-			if(currentStep.name) {
-				self.stepNames[currentStep.name] = self.step;
+			if(currentCommand.name) {
+				self.stepNames[currentCommand.name] = self.step;
 			}
 
-			//self.eventEmitter.emit('save', self.fileName);
+			// replace variables in data with variables from command line
+			var originalCommand = null;
+			if(Object.keys(self.args).length != 0) {
+				originalCommand = currentCommand;
+				for(var i in self.args) {
+					var regexp = new RegExp('{{args\.' + i + '}}', 'g');
+					currentCommand = JSON.parse(JSON.stringify(currentCommand).replace(regexp, self.args[i]));
+				}
+			}
 			
-			if(currentStep.description) {
-				console.log('Description: ', currentStep.description);
-			}
-			console.log('Command:     ', currentStep.command);
-			console.log('Data:        ', currentStep.data);
+			// Log command and data to console
+			console.log('Command:     ', currentCommand.command);
+			console.log('Data:        ', currentCommand.data);
 
-			if(!commands[currentStep.command]) {
+			if(!commands[currentCommand.command]) {
 				process.exit();
 				return;
 			}
 
 			// replace the fromStep name with the real fromStep index
-			if(currentStep.data && currentStep.data.fromStep && typeof(currentStep.data.fromStep) == 'string') {
-				if(self.stepNames[currentStep.data.fromStep]) {
-					currentStep.data.fromStep = self.stepNames[currentStep.data.fromStep];
+			var originalFromStep = currentCommand.data ? currentCommand.data.fromStep || null : null;
+			if(currentCommand.data && currentCommand.data.fromStep && typeof(currentCommand.data.fromStep) == 'string') {
+				if(self.stepNames[currentCommand.data.fromStep]) {
+					currentCommand.data.fromStep = self.stepNames[currentCommand.data.fromStep];
 				}
 			}
 
-			commands[currentStep.command](self.data, self.step, function(res) {
+			commands[currentCommand.command](self.data, self.step, function(res) {
 				self.eventEmitter.emit('commandProcessed', res);
 			});
+
+			if(originalCommand) { currentCommand = originalCommand; }
+			if(originalFromStep) { currentCommand.data.fromStep = originalFromStep; }
 
 		});
 
@@ -148,8 +160,6 @@ var Mate = function() {
 			self.data[self.step].waiting = false;
 			self.data[self.step].processed = true;
 			self.data[self.step].performance.end = Date.now();
-			
-			//self.eventEmitter.emit('save', self.fileName);
 
 			self.data[self.step].result = res;
 
