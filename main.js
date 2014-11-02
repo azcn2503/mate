@@ -65,9 +65,12 @@ var Mate = function() {
 				newHashes[i] = crypto.createHash('md5').update(JSON.stringify(newData[i])).digest('hex');
 			}
 
-			for(var i in self.stepHashes) {
+			for(var i in newHashes) {
+				if(!self.stepHashes[i]) { 
+					self.data[i] = newData[i];
+					continue;
+				}
 				if(self.stepHashes[i] != newHashes[i]) {
-					if(!newData[i]) { continue; }
 					self.data[i] = newData[i];
 					self.stepHashes[i] = newHashes[i];
 				}
