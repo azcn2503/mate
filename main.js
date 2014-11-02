@@ -57,6 +57,11 @@ var Mate = function() {
 			self.fileName = self.campaign.id + '.json';
 			var content = fs.readFileSync(self.fileName, {'encoding': 'utf-8'});
 
+			if(content.length == 0) {
+				self.eventEmitter.emit('waitForCommands');
+				return;
+			}
+
 			var newData = JSON.parse(content);
 			self.data = self.data || newData;
 
@@ -95,6 +100,11 @@ var Mate = function() {
 		self.eventEmitter.on('processCommand', function() {
 
 			var currentCommand = self.data[self.step];
+
+			if(typeof(currentCommand) !== 'object') {
+				self.eventEmitter.emit('waitForCommands');
+				return;
+			}
 
 			currentCommand.processed = currentCommand.processed || false;
 
@@ -144,7 +154,6 @@ var Mate = function() {
 					currentCommand.data.fromStep = self.stepNames[currentCommand.data.fromStep];
 				}
 			}
-			console.log(currentCommand.data);
 
 			commands[currentCommand.command](self.data, self.step, function(res) {
 				self.eventEmitter.emit('commandProcessed', res);
