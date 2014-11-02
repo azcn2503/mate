@@ -25,6 +25,7 @@ var Mate = function() {
 	this.forceRetry   = false;
 
 	this.stepNames = {};
+	this.stepHashes = [];
 
 	this.args = {};
 
@@ -59,12 +60,21 @@ var Mate = function() {
 			var newData = JSON.parse(content);
 			self.data = self.data || newData;
 
-			// Find out if the commands have changed by comparing their content
+			var newHashes = [];
 			for(var i in newData) {
-				if(i >= self.data.length) { self.data[i] = newData[i]; continue; }
-				if(newData[i].command != self.data[i].command || JSON.stringify(newData[i].data) != JSON.stringify(self.data[i].data)) {
+				newHashes[i] = crypto.createHash('md5').update(JSON.stringify(newData[i])).digest('hex');
+			}
+
+			for(var i in self.stepHashes) {
+				if(self.stepHashes[i] != newHashes[i]) {
+					if(!newData[i]) { continue; }
 					self.data[i] = newData[i];
+					self.stepHashes[i] = newHashes[i];
 				}
+			}
+
+			for(var i in newHashes) {
+				self.stepHashes[i] = newHashes[i];
 			}
 			
 			self.step = 0;
@@ -131,6 +141,7 @@ var Mate = function() {
 					currentCommand.data.fromStep = self.stepNames[currentCommand.data.fromStep];
 				}
 			}
+			console.log(currentCommand.data);
 
 			commands[currentCommand.command](self.data, self.step, function(res) {
 				self.eventEmitter.emit('commandProcessed', res);
