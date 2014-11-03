@@ -99,6 +99,14 @@ var Mate = function() {
 
 		self.eventEmitter.on('processCommand', function() {
 
+			// replace variables in data with variables from command line
+			if(Object.keys(self.args).length != 0) {
+				for(var i in self.args) {
+					var regexp = new RegExp('{{args\.' + i + '}}', 'g');
+					self.data[self.step] = JSON.parse(JSON.stringify(self.data[self.step]).replace(regexp, self.args[i]));
+				}
+			}
+
 			var currentCommand = self.data[self.step];
 
 			if(typeof(currentCommand) !== 'object') {
@@ -128,39 +136,25 @@ var Mate = function() {
 				self.stepNames[currentCommand.name] = self.step;
 			}
 
-			// replace variables in data with variables from command line
-			var originalCommand = null;
-			if(Object.keys(self.args).length != 0) {
-				originalCommand = currentCommand;
-				for(var i in self.args) {
-					var regexp = new RegExp('{{args\.' + i + '}}', 'g');
-					currentCommand = JSON.parse(JSON.stringify(currentCommand).replace(regexp, self.args[i]));
-				}
-			}
-			
-			// Log command and data to console
-			console.log('Command:     ', currentCommand.command);
-			console.log('Data:        ', currentCommand.data);
-
 			if(!commands[currentCommand.command]) {
 				process.exit();
 				return;
 			}
 
 			// replace the fromStep name with the real fromStep index
-			var originalFromStep = currentCommand.data ? currentCommand.data.fromStep || null : null;
 			if(currentCommand.data && currentCommand.data.fromStep && typeof(currentCommand.data.fromStep) == 'string') {
 				if(self.stepNames[currentCommand.data.fromStep]) {
 					currentCommand.data.fromStep = self.stepNames[currentCommand.data.fromStep];
 				}
 			}
 
+			// Log command and data to console
+			console.log('Command:     ', currentCommand.command);
+			console.log('Data:        ', currentCommand.data);
+
 			commands[currentCommand.command](self.data, self.step, function(res) {
 				self.eventEmitter.emit('commandProcessed', res);
 			});
-
-			if(originalCommand) { currentCommand = originalCommand; }
-			if(originalFromStep) { currentCommand.data.fromStep = originalFromStep; }
 
 		});
 

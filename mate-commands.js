@@ -369,7 +369,6 @@ var commands = {
 		var matchingExpression      = data[step].data.matchingExpression || null;
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 		var kvp                     = data[step].data.kvp || null;
-		var returnType              = data[step].data.returnType || 'array';
 		var group                   = data[step].data.group || false;
 		var resultData            = data[fromStep].result.data;
 
@@ -510,7 +509,9 @@ var commands = {
 						}
 					}
 					else {
-						res.push(groupRes);
+						if(groupRes[Object.keys(groupRes)[0]] != '') {
+							res.push(groupRes);
+						}
 					}
 				}
 			}
