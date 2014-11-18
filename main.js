@@ -109,7 +109,7 @@ var Mate = function() {
 
 			var currentCommand = self.data[self.step];
 
-			if(typeof(currentCommand) !== 'object') {
+			if(typeof(currentCommand) !== 'object' || !currentCommand.command) {
 				self.eventEmitter.emit('waitForCommands');
 				return;
 			}

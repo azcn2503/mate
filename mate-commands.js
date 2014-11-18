@@ -8,6 +8,8 @@ var nodemailer = require('nodemailer');
 var transporter = nodemailer.createTransport();
 var mkdirp = require('mkdirp');
 
+var json3 = fs.readFileSync('lib/json3/json3.min.js', {encoding: 'utf8'});
+
 driver.manage().timeouts().implicitlyWait(1000);
 
 var commands = {
@@ -151,9 +153,12 @@ var commands = {
 
 		var selector = data[step].data;
 
-		driver.findElement(webdriver.By.css(selector)).click();
-
-		callback({success: true});
+		driver.findElement(webdriver.By.css(selector)).then( function success(el) {
+			el.click();
+			callback({success: true});
+		}).then( null, function error(error) {
+			callback({success: false});
+		});
 
 	},
 
@@ -370,7 +375,10 @@ var commands = {
 		var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 		var kvp                     = data[step].data.kvp || null;
 		var group                   = data[step].data.group || false;
+		var usingExpression = data[step].data.usingExpression || null;
 		var resultData            = data[fromStep].result.data;
+
+		if(usingExpression) { resultData = jexpr(resultData, usingExpression); console.log('resultData', resultData); }
 
 		//if(typeof(resultData) === 'object') { resultData = [resultData]; }
 
@@ -614,6 +622,7 @@ var commands = {
 			var repeatCommand = data[repeatStep].command;
 			this.originalStep = data[repeatStep];
 			commands[repeatCommand](data, repeatStep, function repeatCallback(data) {
+				if(!data.success) { callback({ success: true, data: res}); return; }
 				self.originalStep.result = data;
 				res.push(data);
 				if(self.j == repeatSteps.length - 1) {
@@ -823,41 +832,40 @@ var commands = {
 			details = selector.details || true;
 		}
 
-		var evalSelect = function(selector) {
+		var evalSelect = function(selector, json3) {
 
-			function getElementEssentials(orig, tmp, level) {
-				var tmp = tmp || {};
-				var level = level || 0;
-				for (var i in orig) {
-					if (i == 'selectionDirection' || i == 'selectionEnd' || i == 'selectionStart') {
-						continue;
-					}
-					if (!orig[i]) {
-						continue;
-					}
-					if (!i.match(/[a-z]/)) {
-						continue;
-					}
-					if (typeof (orig[i]) === 'function' || level > 0) {
-						continue;
-					}
-					if (typeof (orig[i]) === 'array' || typeof (orig[i]) === 'object') {
-						tmp[i] = getElementEssentials(orig[i], null, level + 1);
-						continue;
-					}
-					tmp[i] = orig[i];
-					continue;
-				}
-				return tmp;
+			if(!document.querySelector('script#mateJSON3')) {
+
+				var script = document.createElement('script');
+				script.id = 'mateJSON3';
+				script.innerText = json3;
+
+				document.querySelector('head').appendChild(script);
+
 			}
 
-			var el = document.querySelector(selector);
+			var els = getElementEssentials(selector);
+			return els;
 
-			var el2 = [getElementEssentials(el)];
+			function getElementEssentials(selector) {
 
-			var elStringified = JSON.stringify(el2);
+				var thisEl = document.querySelector(selector);
 
-			return elStringified;
+				var tmpEl = {};
+
+				for(var i in thisEl) {
+
+					var thisProp = thisEl[i];
+
+					if(/array|object|function/.test(typeof(thisProp))) { continue; }
+
+					tmpEl[i] = thisProp;
+
+				}
+
+				return JSON.stringify(tmpEl);
+
+			}
 
 		};
 
@@ -865,13 +873,13 @@ var commands = {
 
 			if(details) {
 
-				driver.executeScript(evalSelect, selector).then( function success(nativeEl) {
+				driver.executeScript(evalSelect, selector, json3).then( function success(nativeEl) {
 					callback({
 						data: JSON.parse(nativeEl),
 						success: true
 					});
-				}).then(null, function error() {
-					callback({success: false});
+				}).then(null, function error(error) {
+					callback({success: false, message: error});
 				});
 
 			}
@@ -882,9 +890,8 @@ var commands = {
 
 			}
 
-		}).then(null, function error(message) {
-			console.log(message);
-			callback({success: false});
+		}).then(null, function error(error) {
+			callback({success: false, message: error});
 		});
 
 	},
@@ -898,46 +905,52 @@ var commands = {
 			details = selector.details || true;
 		}
 
-		var evalSelectAll = function(selector) {
+		var evalSelectAll = function(selector, json3) {
 
-			function getElementEssentials(orig, tmp, level) {
-				var tmp = tmp || {};
-				var level = level || 0;
-				for (var i in orig) {
-					if (i == 'selectionDirection' || i == 'selectionEnd' || i == 'selectionStart') {
-						continue;
+			if(!document.querySelector('script#mateJSON3')) {
+
+				var script = document.createElement('script');
+				script.id = 'mateJSON3';
+				//script.src = '//cdnjs.cloudflare.com/ajax/libs/json3/3.3.2/json3.js';
+				script.innerText = json3;
+
+				document.querySelector('head').appendChild(script);
+
+			}
+
+			var els = getElementEssentials(selector);
+			return els;
+
+			function getElementEssentials(selector) {
+
+				var els = document.querySelectorAll(selector);
+
+				var els2 = [];
+
+				for(var i in els) {
+
+					if(!els.hasOwnProperty(i)) { continue; }
+
+					var thisEl = els[i];
+					var tmpEl = {};
+
+					for(var j in thisEl) {
+
+						var thisProp = thisEl[j];
+
+						if(/array|object|function/.test(typeof(thisProp))) { continue; }
+
+						tmpEl[j] = thisProp;
+
 					}
-					if (!orig[i]) {
-						continue;
-					}
-					if (!i.match(/[a-z]/)) {
-						continue;
-					}
-					if (typeof (orig[i]) === 'function' || level > 0) {
-						continue;
-					}
-					if (typeof (orig[i]) === 'array' || typeof (orig[i]) === 'object') {
-						tmp[i] = getElementEssentials(orig[i], null, level + 1);
-						continue;
-					}
-					tmp[i] = orig[i];
-					continue;
+
+					els2.push(tmpEl);
+
 				}
-				return tmp;
+
+				return JSON3.stringify(els2);
+
 			}
-
-			var els = document.querySelectorAll(selector);
-			
-			var els2 = [];
-			for(var i in els) {
-				els2.push(getElementEssentials(els[i]));
-			}
-
-			//var els2 = {test1: true, test2: [1, 2, 3], test3: [false]};
-
-			var elsStringified = JSON.stringify(els2);
-
-			return elsStringified;
 
 		};
 
@@ -945,13 +958,13 @@ var commands = {
 
 			if(details) {
 
-				driver.executeScript(evalSelectAll, selector).then( function success(nativeEls) {
+				driver.executeScript(evalSelectAll, selector, json3).then( function success(nativeEls) {
 					callback({
 						data: JSON.parse(nativeEls),
 						success: true
 					});
-				}).then(null, function error() {
-					callback({success: false})
+				}).then(null, function error(error) {
+					callback({success: false, message: error})
 				});
 
 			}
@@ -962,11 +975,33 @@ var commands = {
 
 			}
 
-		}).then(null, function error() {
-			callback({success: false});
+		}).then(null, function error(error) {
+			callback({success: false, message: error});
 		});
 
 	},
+
+	/*'selectOption': function(data, step, callback) {
+
+		var data = data[step].data || {};
+		var selector = data.selector || 'select';
+		var text = data.text || null;
+		var value = data.value || null;
+		var index = data.index || 0;
+
+		driver.findElement(webdriver.By.css(selector)).then( function success(el) {
+			if(text) {
+				el.
+			}
+			if(value) {
+			}
+			if(index) {
+			}
+		}).then(null, function error(error) {
+			callback({ success: false, message: error });
+		});
+
+	},*/
 
 	'sendKeys': function(data, step, callback) {
 
@@ -1018,7 +1053,7 @@ var commands = {
 			return true;
 		};
 
-		driver.executeScript(submitForm, selector).then(function success() {
+		driver.executeScript(evalSubmit, selector).then(function success() {
 			callback({success: true});
 		}).then(null, function error() {
 			callback({success: false});
