@@ -380,8 +380,6 @@ var commands = {
 
 		if(usingExpression) { resultData = jexpr(resultData, usingExpression); console.log('resultData', resultData); }
 
-		//if(typeof(resultData) === 'object') { resultData = [resultData]; }
-
 		// key value pair settings
 		if(kvp) {
 			kvp.k = kvp.k || [];
@@ -863,7 +861,7 @@ var commands = {
 
 				}
 
-				return JSON.stringify(tmpEl);
+				return JSON.stringify([tmpEl]);
 
 			}
 
@@ -980,28 +978,6 @@ var commands = {
 		});
 
 	},
-
-	/*'selectOption': function(data, step, callback) {
-
-		var data = data[step].data || {};
-		var selector = data.selector || 'select';
-		var text = data.text || null;
-		var value = data.value || null;
-		var index = data.index || 0;
-
-		driver.findElement(webdriver.By.css(selector)).then( function success(el) {
-			if(text) {
-				el.
-			}
-			if(value) {
-			}
-			if(index) {
-			}
-		}).then(null, function error(error) {
-			callback({ success: false, message: error });
-		});
-
-	},*/
 
 	'sendKeys': function(data, step, callback) {
 

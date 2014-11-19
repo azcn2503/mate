@@ -116,6 +116,10 @@ var Mate = function() {
 
 			currentCommand.processed = currentCommand.processed || false;
 
+			if(currentCommand.name) {
+				self.stepNames[currentCommand.name] = self.step;
+			}
+
 			if(currentCommand.setup || (currentCommand.processed && !self.forceRetry)) {
 				self.eventEmitter.emit('processNextCommand');
 				return;
@@ -132,19 +136,25 @@ var Mate = function() {
 				currentCommand._id = self.campaign.id;
 			}
 
-			if(currentCommand.name) {
-				self.stepNames[currentCommand.name] = self.step;
-			}
-
 			if(!commands[currentCommand.command]) {
 				process.exit();
 				return;
 			}
 
 			// replace the fromStep name with the real fromStep index
-			if(currentCommand.data && currentCommand.data.fromStep && typeof(currentCommand.data.fromStep) == 'string') {
-				if(self.stepNames[currentCommand.data.fromStep]) {
-					currentCommand.data.fromStep = self.stepNames[currentCommand.data.fromStep];
+			if(currentCommand.data) {
+				if(currentCommand.data.fromStep && typeof(currentCommand.data.fromStep) == 'string') {
+					if(self.stepNames[currentCommand.data.fromStep]) {
+						currentCommand.data.fromStep = self.stepNames[currentCommand.data.fromStep];
+					}
+				}
+				if(currentCommand.data.steps) {
+					for(var i in currentCommand.data.steps) {
+						if(typeof(currentCommand.data.steps[i]) !== 'string') { continue; }
+						if(self.stepNames[currentCommand.data.steps[i]]) {
+							currentCommand.data.steps[i] = self.stepNames[currentCommand.data.steps[i]];
+						}
+					}
 				}
 			}
 
@@ -173,6 +183,10 @@ var Mate = function() {
 		self.eventEmitter.on('commandProcessed', function(res) {
 
 			res = res || {};
+
+			// Add name and command name to res
+			res.command = self.data[self.step].command;
+			if(self.data[self.step].name) { res.name = self.data[self.step].name; }
 
 			self.data[self.step].waiting = false;
 			self.data[self.step].processed = true;
