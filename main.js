@@ -1,8 +1,4 @@
-// var crypto = require('crypto');
-// var db       = require('mongodb');
-let events   = require('events');
 let fs       = require('fs');
-let commands = require('./mate-commands').commands;
 let mkdirp = require('mkdirp');
 let args     = process.argv;
 if (args.length < 3) { process.exit(); }
@@ -26,6 +22,16 @@ class Mate2 {
 		this.stepHashes = [];
 
 		this.args = {};
+
+		this.webdriver = null;
+		this.driver = null;
+
+	}
+
+	BuildDriver(type = 'phantomjs') {
+
+		this.webdriver = require('selenium-webdriver');
+		this.driver = new this.webdriver.Builder().withCapabilities(this.webdriver.Capabilities[type]()).build();
 
 	}
 
@@ -141,9 +147,10 @@ class Mate2 {
 		this.data[this.step].result = res;
 
 		console.log(res);
+		console.log('---');
 
 		if (command.command == 'done') {
-			console.log('Returning true because done encountered');
+			this.Done();
 			return true;
 		}
 
@@ -174,4 +181,7 @@ class Mate2 {
 let mate = new Mate2();
 mate.SetCampaign(args[2]);
 mate.InjectArguments();
+mate.BuildDriver('chrome');
+let commands = require('./mate-commands').commands;
+commands.SetDrivers(mate.webdriver, mate.driver);
 mate.Load();

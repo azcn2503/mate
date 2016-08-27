@@ -1,5 +1,3 @@
-let webdriver = require('selenium-webdriver');
-let driver    = new webdriver.Builder().withCapabilities(webdriver.Capabilities.phantomjs()).build();
 let events    = require('events');
 let fs        = require('fs');
 let jexpr     = require('./lib/jexpr/jexpr.js');
@@ -10,13 +8,23 @@ let mkdirp = require('mkdirp');
 
 let json3 = fs.readFileSync('lib/json3/json3.min.js', {encoding: 'utf8'});
 
-driver.manage().timeouts().implicitlyWait(1000);
-
 class Commands {
 
 	constructor() {
 
 		this.commands = {};
+
+		this.webdriver = null;
+		this.driver = null;
+
+	}
+
+	SetDrivers(webdriver, driver) {
+
+		this.webdriver = webdriver;
+		this.driver = driver;
+
+		this.driver.manage().timeouts().implicitlyWait(1000);
 
 	}
 
@@ -39,7 +47,7 @@ class Commands {
 let commands = new Commands();
 
 commands.Register('acceptAlert', (data, step, callback) => {
-	driver.switchTo().alert().then( function success(alert) {
+	commands.driver.switchTo().alert().then( function success(alert) {
 		alert.getText().then( function success(text) {
 			alert.accept();
 			callback({success: true, data: text});
@@ -172,7 +180,7 @@ commands.Register('assert', (data, step, callback) => {
 commands.Register('click', (data, step, callback) => {
 	let selector = data[step].data;
 
-	driver.findElement(webdriver.By.css(selector)).then( function success(el) {
+	commands.driver.findElement(commands.webdriver.By.css(selector)).then( function success(el) {
 		el.click();
 		callback({success: true});
 	}).then( null, function error(error) {
@@ -188,6 +196,8 @@ commands.Register('done', (data, step, callback) => {
 		fileName = 'output/' + fileName.replace(/[\/\\\<\>\|\":?*]/g, '-');
 		if(!/\.json$/.test(fileName)) { fileName += '.json'; }
 	}
+
+	commands.driver.quit();
 
 	callback({fileName: fileName, success: true});
 });
@@ -320,7 +330,7 @@ commands.Register('extractTable', (data, step, callback) => {
 
 	};
 
-	driver.executeScript(evalExtractTable, selector, options).then(function success(data) {
+	commands.driver.executeScript(evalExtractTable, selector, options).then(function success(data) {
 		callback({success: true, data: data});
 	}).then(null, function error(res) {
 		console.log(res);
@@ -544,7 +554,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 
 commands.Register('getCurrentURL', (data, step, callback) => {
 
-	driver.getCurrentUrl().then(function success(url) {
+	commands.driver.getCurrentUrl().then(function success(url) {
 		callback({success: true, data: url});
 	});
 
@@ -552,7 +562,7 @@ commands.Register('getCurrentURL', (data, step, callback) => {
 
 commands.Register('getWindowHandle', (data, step, callback) => {
 
-	driver.getWindowHandle().then(function success(handle) {
+	commands.driver.getWindowHandle().then(function success(handle) {
 		callback({success: true, data: handle});
 	}).then(null, function error() {
 		callback({success: false});
@@ -562,7 +572,7 @@ commands.Register('getWindowHandle', (data, step, callback) => {
 
 commands.Register('getWindowHandles', (data, step, callback) => {
 
-	driver.getAllWindowHandles().then(function success(handles) {
+	commands.driver.getAllWindowHandles().then(function success(handles) {
 		callback({success: true, data: handles});
 	}).then(null, function error() {
 		callback({success: false});
@@ -607,7 +617,7 @@ commands.Register('matchEach', (data, step, callback) => {
 
 commands.Register('open', (data, step, callback) => {
 	let url = data[step].data;
-	driver.get(url).then(function success() {
+	commands.driver.get(url).then(function success() {
 		callback({success: true});
 	}).then(null, function error() {
 		callback({success: false});
@@ -659,7 +669,7 @@ commands.Register('runScript', (data, step, callback) => {
 		return true;
 	};
 
-	driver.executeScript(evalScript, script).then(function success() {
+	commands.driver.executeScript(evalScript, script).then(function success() {
 		callback({success: true});
 	}).then(null, function error(err) {
 		console.log(err);
@@ -721,7 +731,7 @@ commands.Register('screenshot', (data, step, callback) => {
 			callback({success: false, error: err});
 			return;
 		}
-		driver.takeScreenshot().then( function success(data) {
+		commands.driver.takeScreenshot().then( function success(data) {
 			fs.writeFileSync(fileName, data, {'encoding': 'base64'});
 			callback({
 				data: {
@@ -769,7 +779,7 @@ commands.Register('scrollPageTo', (data, step, callback) => {
 
 	this.eventEmitter.on('scroll', function() {
 
-		driver.executeScript(evalScroll, to).then( function(scrollTop) {
+		commands.driver.executeScript(evalScroll, to).then( function(scrollTop) {
 			self.eventEmitter.emit('processScroll', scrollTop);
 		});
 
@@ -849,7 +859,7 @@ commands.Register('search', (data, step, callback) => {
 	let searchText = data[step].data || 'mate';
 	data[step].data = {};
 	data[step].data.selector = 'input[name=q]';
-	data[step].data.string = searchText + webdriver.Key.RETURN;
+	data[step].data.string = searchText + commands.webdriver.Key.RETURN;
 
 	commands.Run('sendKeys', data, step, callback);
 
@@ -901,11 +911,11 @@ commands.Register('select', (data, step, callback) => {
 
 	};
 
-	driver.findElement(webdriver.By.css(selector)).then( function success(el) {
+	commands.driver.findElement(commands.webdriver.By.css(selector)).then( function success(el) {
 
 		if(details) {
 
-			driver.executeScript(evalSelect, selector, json3).then( function success(nativeEl) {
+			commands.driver.executeScript(evalSelect, selector, json3).then( function success(nativeEl) {
 				callback({
 					data: JSON.parse(nativeEl),
 					success: true
@@ -986,11 +996,11 @@ commands.Register('selectAll', (data, step, callback) => {
 
 	};
 
-	driver.findElements(webdriver.By.css(selector)).then( function success(els) {
+	commands.driver.findElements(commands.webdriver.By.css(selector)).then( function success(els) {
 
 		if(details) {
 
-			driver.executeScript(evalSelectAll, selector, json3).then( function success(nativeEls) {
+			commands.driver.executeScript(evalSelectAll, selector, json3).then( function success(nativeEls) {
 				callback({
 					data: JSON.parse(nativeEls),
 					success: true
@@ -1020,9 +1030,9 @@ commands.Register('sendKeys', (data, step, callback) => {
 	let selector = data.selector;
 	let string = data.string;
 
-	string = string.replace(/\{\{ENTER\}\}/, webdriver.Key.RETURN);
+	string = string.replace(/\{\{ENTER\}\}/, commands.webdriver.Key.RETURN);
 
-	driver.findElement(webdriver.By.css(selector)).sendKeys(string).then( function success() {
+	commands.driver.findElement(commands.webdriver.By.css(selector)).sendKeys(string).then( function success() {
 		callback({success: true});
 	}).then(null, function error(message) {
 		callback({success: false});
@@ -1033,7 +1043,7 @@ commands.Register('sendKeys', (data, step, callback) => {
 commands.Register('setImplicitWaitTimeout', (data, step, callback) => {
 
 	let ms = data[step].data || 1000;
-	driver.manage().timeouts().implicitlyWait(ms);
+	commands.driver.manage().timeouts().implicitlyWait(ms);
 	callback({success: true});
 
 });
@@ -1042,7 +1052,7 @@ commands.Register('setWindow', (data, step, callback) => {
 
 	let handle = data[step].data;
 
-	driver.switchTo().window(handle).then(function success() {
+	commands.driver.switchTo().window(handle).then(function success() {
 		callback({success: true});
 	}).then(null, function error() {
 		callback({success: false});
@@ -1059,7 +1069,7 @@ commands.Register('submitForm', (data, step, callback) => {
 		return true;
 	};
 
-	driver.executeScript(evalSubmit, selector).then(function success() {
+	commands.driver.executeScript(evalSubmit, selector).then(function success() {
 		callback({success: true});
 	}).then(null, function error() {
 		callback({success: false});
@@ -1166,7 +1176,7 @@ commands.Register('suggestSelector', (data, step, callback) => {
 		
 	}
 
-	driver.executeScript(evalSuggest, selector, 'array').then(function success(success) {
+	commands.driver.executeScript(evalSuggest, selector, 'array').then(function success(success) {
 		callback({success: true, data: success});
 	}).then(null, function error() {
 		callback({success: false});
