@@ -1,254 +1,177 @@
-var crypto = require('crypto');
-var db       = require('mongodb');
-var events   = require('events');
-var fs       = require('fs');
-var commands = require('./mate-commands').commands;
-var mkdirp = require('mkdirp');
-var args     = process.argv;
-if(args.length < 3) { process.exit(); }
+// var crypto = require('crypto');
+// var db       = require('mongodb');
+let events   = require('events');
+let fs       = require('fs');
+let commands = require('./mate-commands').commands;
+let mkdirp = require('mkdirp');
+let args     = process.argv;
+if (args.length < 3) { process.exit(); }
 
-var Mate = function() {
+class Mate2 {
 
-	var self = this;
+	constructor() {
 
-	this.campaign = {
-		id: null,
-		complete: false,
-		timer: 0,
-		limit: 5
-	};
-	
-	this.fileName     = '';
-	this.sourceData = [];
-	this.step         = 0;
-	this.eventEmitter = new events.EventEmitter();
-	this.forceRetry   = false;
+		this.campaign = {
+			id: null,
+			complete: false,
+			timer: 0,
+			limit: 5
+		};
 
-	this.stepNames = {};
-	this.stepHashes = [];
+		this.fileName = '';
+		this.sourceData = [];
+		this.step = 0;
 
-	this.args = {};
+		this.stepNames = {};
+		this.stepHashes = [];
 
-	this.setCampaign = function(campaign) {
+		this.args = {};
 
-		self.campaign.id = campaign;
-
-	};
-
-	this.exec = function() {
-
-		self.eventEmitter.on('save', function(fileName) {
-
-			var content = JSON.stringify(self.data, null, '\t');
-			var fileName = fileName || self.campaign.id + '-' + Date.now() + Math.random().toString().replace(/\./, '0') + '.json';
-
-			mkdirp('output', function(err) {
-				if(err) {
-					console.log('There was an error saving the campaign: ' + err);
-					return;
-				}
-				fs.writeFileSync(fileName, content, {'encoding': 'utf-8'});
-			});
-
-		});
-
-		self.eventEmitter.on('load', function() {
-
-			self.fileName = self.campaign.id + '.json';
-			var content = fs.readFileSync(self.fileName, {'encoding': 'utf-8'});
-
-			if(content.length == 0) {
-				self.eventEmitter.emit('waitForCommands');
-				return;
-			}
-
-			var newData = JSON.parse(content);
-			self.data = self.data || newData;
-
-			var newHashes = [];
-			for(var i in newData) {
-				newHashes[i] = crypto.createHash('md5').update(JSON.stringify(newData[i])).digest('hex');
-			}
-
-			for(var i in newHashes) {
-				if(!self.stepHashes[i]) { 
-					self.data[i] = newData[i];
-					continue;
-				}
-				if(self.stepHashes[i] != newHashes[i]) {
-					self.data[i] = newData[i];
-					self.stepHashes[i] = newHashes[i];
-				}
-			}
-
-			for(var i in newHashes) {
-				self.stepHashes[i] = newHashes[i];
-			}
-			
-			self.step = 0;
-			self.eventEmitter.emit('processCommand');
-
-		});
-
-		self.eventEmitter.on('retry', function() {
-
-			self.step = 0;
-			self.eventEmitter.emit('load');
-
-		});
-
-		self.eventEmitter.on('processCommand', function() {
-
-			// replace variables in data with variables from command line
-			if(Object.keys(self.args).length != 0) {
-				for(var i in self.args) {
-					var regexp = new RegExp('{{args\.' + i + '}}', 'g');
-					self.data[self.step] = JSON.parse(JSON.stringify(self.data[self.step]).replace(regexp, self.args[i]));
-				}
-			}
-
-			var currentCommand = self.data[self.step];
-
-			if(typeof(currentCommand) !== 'object' || !currentCommand.command) {
-				self.eventEmitter.emit('waitForCommands');
-				return;
-			}
-
-			currentCommand.processed = currentCommand.processed || false;
-
-			if(currentCommand.name) {
-				self.stepNames[currentCommand.name] = self.step;
-			}
-
-			if(currentCommand.setup || (currentCommand.processed && !self.forceRetry)) {
-				self.eventEmitter.emit('processNextCommand');
-				return;
-			}
-
-			currentCommand.data = currentCommand.data || null;
-			currentCommand.waiting = true;
-			currentCommand.step = self.step;
-			currentCommand.performance = {
-				'start': Date.now(),
-				'end': null
-			};
-			if(currentCommand.command == 'done') {
-				currentCommand._id = self.campaign.id;
-			}
-
-			if(!commands[currentCommand.command]) {
-				process.exit();
-				return;
-			}
-
-			// replace the fromStep name with the real fromStep index
-			if(currentCommand.data) {
-				if(currentCommand.data.fromStep && typeof(currentCommand.data.fromStep) == 'string') {
-					if(self.stepNames[currentCommand.data.fromStep]) {
-						currentCommand.data.fromStep = self.stepNames[currentCommand.data.fromStep];
-					}
-				}
-				if(currentCommand.data.steps) {
-					for(var i in currentCommand.data.steps) {
-						if(typeof(currentCommand.data.steps[i]) !== 'string') { continue; }
-						if(self.stepNames[currentCommand.data.steps[i]]) {
-							currentCommand.data.steps[i] = self.stepNames[currentCommand.data.steps[i]];
-						}
-					}
-				}
-			}
-
-			// Log command and data to console
-			console.log('Command:     ', currentCommand.command);
-			console.log('Data:        ', currentCommand.data);
-
-			commands[currentCommand.command](self.data, self.step, function(res) {
-				self.eventEmitter.emit('commandProcessed', res);
-			});
-
-		});
-
-		self.eventEmitter.on('processNextCommand', function(reason) {
-
-			if(reason) { console.log(reason); }
-			self.step++;
-			if(self.step >= self.data.length) {
-				self.eventEmitter.emit('waitForCommands');
-				return;
-			}
-			self.eventEmitter.emit('processCommand');
-
-		});
-
-		self.eventEmitter.on('commandProcessed', function(res) {
-
-			res = res || {};
-
-			// Add name and command name to res
-			res.command = self.data[self.step].command;
-			if(self.data[self.step].name) { res.name = self.data[self.step].name; }
-
-			self.data[self.step].waiting = false;
-			self.data[self.step].processed = true;
-			self.data[self.step].performance.end = Date.now();
-
-			self.data[self.step].result = res;
-
-			var time = self.data[self.step].performance.end - self.data[self.step].performance.start;
-
-			console.log('Time taken:   ' + time + 'ms');
-
-			console.log(res);
-
-			console.log('\n---\n');
-			
-			if(self.data[self.step].command == 'done') {
-				self.eventEmitter.emit('done', res);
-				return;
-			}
-			
-			self.eventEmitter.emit('processNextCommand');
-
-		});
-
-		self.eventEmitter.on('done', function(res) {
-
-			res.fileName = res.fileName || '';
-
-			self.eventEmitter.emit('save', res.fileName);
-			self.campaign.complete = true;
-
-		});
-
-		self.eventEmitter.on('waitForCommands', function() {
-
-			self.campaign.timer++;
-			setTimeout( function() {
-				self.eventEmitter.emit('retry');
-			}, 1000);
-
-		});
-
-		self.eventEmitter.emit('load');
-
-	};
-
-};
-
-var mate = new Mate();
-mate.setCampaign(args[2]);
-if(args[3] && args[3] == 'force') { mate.forceRetry = true; }
-for(i = 3; i < args.length; i++) {
-	if(!args[i] || args[i].indexOf('--') == -1) { break; }
-	var kvp = args[i].match(/--(.+)?=(.+)/);
-	var k = kvp[1].replace(/[\"\=]/g, '').trim();
-	var v = kvp[2].replace(/[\"\=]/g, '').trim();
-	mate.args[k] = v;
-}
-mate.exec();
-
-(function wait() {
-	if(!mate.campaign.complete && mate.campaign.timer < mate.campaign.limit) {
-		setTimeout(wait, 1000);
 	}
-})();
+
+	InjectArguments() {
+
+		for (let i = 3; i < args.length; i++) {
+			if(!args[i] || args[i].indexOf('--') == -1) { break; }
+			var kvp = args[i].match(/--(.+)?=(.+)/);
+			var k = kvp[1].replace(/[\"\=]/g, '').trim();
+			var v = kvp[2].replace(/[\"\=]/g, '').trim();
+			this.args[k] = v;
+		}
+
+	}
+
+	SetCampaign(campaign) {
+
+		this.campaign.id = campaign;
+
+	}
+
+	Load(fileName = `${this.campaign.id}.json`) {
+
+		let content = fs.readFileSync(fileName, {'encoding': 'utf-8'});
+
+		if(content.length == 0) {
+			this.WaitForCommands();
+			return false;
+		}
+
+		let data = JSON.parse(content);
+		this.data = this.data || data;
+
+		this.step = 0;
+		this.ProcessCommand();
+
+		return true;
+
+	}
+
+	Save(fileName = `${this.campaign.id}-${Date.now() + Math.random().toString().replace(/\./, '0')}.json`) {
+
+	}
+
+	Retry() {
+
+		this.step = 0;
+		this.Load();
+
+	}
+
+	ProcessCommand() {
+
+		let command = this.data[this.step];
+
+		// replace variables in data with variables from command line
+		if (Object.keys(this.args).length != 0) {
+			for(let i in this.args) {
+				let regexp = new RegExp('{{args\.' + i + '}}', 'g');
+				this.data[this.step] = JSON.parse(JSON.stringify(command).replace(regexp, this.args[i]));
+				//console.log(command);
+			}
+		}
+
+		if(typeof(command) !== 'object' || !command.command) {
+			this.WaitForCommands();
+			return false;
+		}
+
+		command.processed = command.processed || false;
+
+		if(command.name) {
+			this.stepNames[command.name] = this.step;
+		}
+
+		if(command.setup || (command.processed && !this.forceRetry)) {
+			this.ProcessNextCommand();
+			return false;
+		}
+
+		console.log(`Processing command: ${command.command}`);
+
+		// Execute the command
+		commands.Run(command.command, this.data, this.step, (res) => {
+			this.CommandProcessed(res);
+		});
+
+		return true;
+
+	}
+
+	ProcessNextCommand(reason = '') {
+
+		if (reason != '') { 
+			console.log(`Processing next command because: ${reason}`);
+		}
+
+		this.step++;
+
+		if(this.step >= this.data.length) {
+			this.WaitForCommands('Out of commands');
+			return false;
+		}
+		this.ProcessCommand();
+		return true;
+
+	}
+
+	CommandProcessed(res = {}) {
+
+		let command = this.data[this.step];
+		this.data[this.step].processed = true;
+		this.data[this.step].result = res;
+
+		console.log(res);
+
+		if (command.command == 'done') {
+			console.log('Returning true because done encountered');
+			return true;
+		}
+
+		this.ProcessNextCommand('Command processed');
+
+	}
+
+	Done() {
+
+	}
+
+	WaitForCommands(reason = '') {
+
+		if (reason != '') { 
+			console.log(`Waiting for commands because: ${reason}`);
+		}
+
+		this.campaign.timer++;
+
+		setTimeout( () => {
+			this.Retry();
+		}, 1000);
+
+	}
+
+}
+
+let mate = new Mate2();
+mate.SetCampaign(args[2]);
+mate.InjectArguments();
+mate.Load();
