@@ -22,14 +22,14 @@ class Commands {
 
 	Register(name, action) {
 
-		console.log(`Registering command: ${name}`);
+		//console.log(`Registering command: ${name}`);
 		this.commands[name] = (...args) => { action(...args); };
 
 	}
 
 	Run(command, ...args) {
 
-		console.log('Running command: ' + command + ' with args: ', ...args);
+		//console.log('Running command: ' + command + ' with args: ', ...args);
 		this.commands[command](...args);
 
 	}
@@ -221,7 +221,7 @@ commands.Register('email', (data, step, callback) => {
 
 commands.Register('eval', (data, step, callback) => {
 
-	let fromStep     = data[step].data.fromStep;
+	let fromStep     = data[step].data.fromStep ;
 	let usingExpression = data[step].data.usingExpression || null;
 	let evalScript   = data[step].data.eval;
 	let resultData = data[fromStep].result.data;
@@ -650,6 +650,24 @@ commands.Register('repeat', (data, step, callback) => {
 
 });
 
+commands.Register('runScript', (data, step, callback) => {
+
+	let script = data[step].data;
+
+	let evalScript = function(script) {
+		eval(script);
+		return true;
+	};
+
+	driver.executeScript(evalScript, script).then(function success() {
+		callback({success: true});
+	}).then(null, function error(err) {
+		console.log(err);
+		callback({success: false});
+	});
+
+});
+
 commands.Register('save', (data, step, callback) => {
 
 	let fromStep     = data[step].data.fromStep;
@@ -1001,6 +1019,8 @@ commands.Register('sendKeys', (data, step, callback) => {
 
 	let selector = data.selector;
 	let string = data.string;
+
+	string = string.replace(/\{\{ENTER\}\}/, webdriver.Key.RETURN);
 
 	driver.findElement(webdriver.By.css(selector)).sendKeys(string).then( function success() {
 		callback({success: true});
