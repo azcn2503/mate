@@ -1,14 +1,19 @@
 # Mate Server
 
+## Introduction
+
+Mate is a website automation framework built around Selenium. It can be used for business process automation, website testing, scraping, and a whole load of other things. You tell the program what commands you want to run on the page and Mate will run them sequentially, akin to Selenese. The commands are simple to use and understand. 
+
+Mate is still under development and was recently opened for public consumption (August 2016). Please feel free to contribute!
+
 ## Prerequisites
 
-* Selenium Server
-* PhantomJS
+* PhantomJS or ChromeDriver
 * Node (make sure to install the dependencies!)
     
 ## Usage
 
-Check out the following `soundcloud.json` file:
+Check out the following `soundcloud.json` campaign file. These campaign files tell the Mate application what to do with a webpage:
 
     [
         {
@@ -272,7 +277,7 @@ Example:
         }
     }
 
-This will retrurn all the innerHTML and innerText values.
+This will return all the innerHTML and innerText values.
 
 Example:
 
