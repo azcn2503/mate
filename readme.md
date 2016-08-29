@@ -188,10 +188,34 @@ Example:
 
 ---
 
+#### commands
+**data**: [array of commands]
+
+You can nest commands within other commands and they will execute sequentially, like this:
+
+    {
+        "name": "clickButtons",
+        "command": "commands",
+        "data": [
+            {
+                "command": "click",
+                "data": "button"
+            },
+            {
+                "command": "click",
+                "data": "input[type=submit]"
+            }
+        ]
+    }
+
+Will click a button, then click a submit button.
+
+---
+
 #### done
 **data**: `fileName string`
 
-Completes the campaign and ends the node process. You can optionally specify the filename that the campaign file will be saved as. If a filename is not specified, it will overwrite the original campaign file. The file extension `.json` will automatically be added if it is not present.
+Completes the campaign and ends the node and browser processes. You can optionally specify the filename that the campaign file will be saved as. If a filename is not specified, it will overwrite the original campaign file. The file extension `.json` will automatically be added if it is not present.
 
 ---
 
@@ -492,6 +516,22 @@ You may wish to not perform the initial execution of a task being set up for rep
     }
 
 Repeats the click, selectAll and getAttributeValues commands ten times, then saves all their data.
+
+---
+
+#### runScript
+**data**: `string`
+
+Run a piece of JavaScript code on the page.
+
+Example:
+
+    {
+        "command": "runScript",
+        "data": "document.querySelector('button.btn1').click();"
+    }
+
+Clicks a button with class `.btn1` on the current page.
 
 ---
 
