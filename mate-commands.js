@@ -188,6 +188,36 @@ commands.Register('click', (data, step, callback) => {
 	});
 });
 
+commands.Register('commands', (data, step, callback) => {
+
+	let innerCommands = data[step].data;
+
+	console.log('innerCommands', innerCommands);
+
+	let runInnerCommand = (innerStep = 0) => {
+
+		if (innerStep >= innerCommands.length) {
+
+			callback();
+			return true;
+
+		}
+
+		let innerCommand = innerCommands[innerStep];
+		console.log('innerCommand', innerCommand);
+
+		commands.Run(innerCommands[innerStep].command, innerCommands, innerStep, (innerRes) => {
+
+			runInnerCommand(innerStep + 1);
+
+		});
+
+	};
+
+	runInnerCommand();
+
+});
+
 commands.Register('done', (data, step, callback) => {
 	// _id is the campaign ID passed from processCommand
 
@@ -721,7 +751,7 @@ commands.Register('save', (data, step, callback) => {
 
 commands.Register('screenshot', (data, step, callback) => {
 
-	let fileName = data[step].data;
+	let fileName = data[step].data || null;
 
 	fileName = fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0') + '.png';
 	fileName = 'commands/screenshot/' + fileName;
@@ -1030,12 +1060,10 @@ commands.Register('sendKeys', (data, step, callback) => {
 	let selector = data.selector;
 	let string = data.string;
 
-	string = string.replace(/\{\{ENTER\}\}/, commands.webdriver.Key.RETURN);
-
 	commands.driver.findElement(commands.webdriver.By.css(selector)).sendKeys(string).then( function success() {
 		callback({success: true});
 	}).then(null, function error(message) {
-		callback({success: false});
+		callback({success: false, error: message});
 	});
 
 });
