@@ -19,10 +19,10 @@ class Commands {
 
 	}
 
-	SetDrivers(webdriver, driver) {
+	Attach(mate) {
 
-		this.webdriver = webdriver;
-		this.driver = driver;
+		this.webdriver = mate.webdriver;
+		this.driver = mate.driver;
 
 		this.driver.manage().timeouts().implicitlyWait(1000);
 
@@ -225,11 +225,16 @@ commands.Register('done', (data, step, callback) => {
 	if(fileName != '') {
 		fileName = 'output/' + fileName.replace(/[\/\\\<\>\|\":?*]/g, '-');
 		if(!/\.json$/.test(fileName)) { fileName += '.json'; }
+		mkdirp('output/', (err) => {
+			if (err) {
+				callback({ success: false });
+				return false;
+			}
+			fs.writeFileSync(fileName, JSON.stringify(data, null, '\t'), { encoding: 'utf-8' });
+			callback({fileName: fileName, success: true});
+			return true;
+		});
 	}
-
-	commands.driver.quit();
-
-	callback({fileName: fileName, success: true});
 });
 
 commands.Register('email', (data, step, callback) => {

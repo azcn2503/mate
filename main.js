@@ -160,6 +160,8 @@ class Mate2 {
 
 	Done() {
 
+		if (this.driver) { this.driver.quit(); }
+
 	}
 
 	WaitForCommands(reason = '') {
@@ -183,5 +185,5 @@ mate.SetCampaign(args[2]);
 mate.InjectArguments();
 mate.BuildDriver('chrome');
 let commands = require('./mate-commands').commands;
-commands.SetDrivers(mate.webdriver, mate.driver);
+commands.Attach(mate);
 mate.Load();
