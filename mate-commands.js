@@ -40,6 +40,12 @@ class Commands {
 	Run(command, ...args) {
 
 		//console.log('Running command: ' + command + ' with args: ', ...args);
+		
+		if (!this.commands[command] || !this.commands.hasOwnProperty(command)) {
+			console.log(`The command: ${command}, does not exist.`);
+			return false;
+		}
+
 		this.commands[command](...args);
 
 	}
@@ -675,30 +681,29 @@ commands.Register('repeat', (data, step, callback) => {
 
 	let res = [];
 
-	(function repeat(i, j) {
-		var self = this;
-		this.i = i || 0;
-		this.j = j || 0;
-		var repeatStep = repeatSteps[this.j];
-		var repeatCommand = data[repeatStep].command;
-		this.originalStep = data[repeatStep];
-		commands[repeatCommand](data, repeatStep, function repeatCallback(data) {
+	let repeat = (i = 0, j = 0) => {
+		let repeatStep = repeatSteps[j];
+		let repeatCommand = data[repeatStep].command;
+		let originalStep = data[repeatStep];
+		commands.Run(repeatCommand, data, repeatStep, (data) => {
 			if(!data.success) { callback({ success: true, data: res}); return; }
-			self.originalStep.result = data;
+			originalStep.result = data;
 			res.push(data);
-			if(self.j == repeatSteps.length - 1) {
-				if(self.i == repeatTimes - 1) {
+			if(j == repeatSteps.length - 1) {
+				if(i == repeatTimes - 1) {
 					callback({success: true, data: res});
 				}
 				else {
-					repeat(self.i + 1);
+					repeat(i + 1);
 				}
 			}
 			else {
-				repeat(self.i, self.j + 1);
+				repeat(i, j + 1);
 			}
 		});
-	})();
+	};
+
+	repeat();
 
 });
 
