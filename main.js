@@ -143,10 +143,13 @@ class Mate2 {
 	CommandProcessed(res = {}) {
 
 		let command = this.data[this.step];
+		command.output = command.output || true;
 		this.data[this.step].processed = true;
 		this.data[this.step].result = res;
 
-		console.log(JSON.stringify(res));
+		if (command.output) {
+			console.log(JSON.stringify(res));
+		}
 		console.log('---');
 
 		if (command.command == 'done') {
