@@ -48,6 +48,14 @@ class Commands {
 
 	}
 
+	LoadFromFile(fileName) {
+
+		let content = fs.readFileSync(fileName, { encoding: 'utf-8' });
+		let data = JSON.parse(content);
+		return data;
+
+	}
+
 }
 
 let commands = new Commands();
@@ -433,6 +441,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 
 	};
 
+	let fromFile = data[step].data.fromFile || null;
 	let fromStep                = data[step].data.fromStep || step - 1; // required
 	let attributeName           = data[step].data.attributeName; // required
 	let matchingExpression      = data[step].data.matchingExpression || null;
@@ -440,7 +449,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 	let kvp                     = data[step].data.kvp || null;
 	let group                   = data[step].data.group || false;
 	let usingExpression = data[step].data.usingExpression || null;
-	let resultData            = data[fromStep].result.data;
+	let resultData            = fromFile ? commands.LoadFromFile(fromFile) : data[fromStep].result.data;
 
 	if (usingExpression) { resultData = jexpr(resultData, usingExpression); }
 
@@ -465,6 +474,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 	for(let i in resultData) { // loop through each element
 
 		let el = resultData[i];
+		let groupRes = null;
 
 		if(kvp && kvp.groupByKeyName && kvp.k.length > 0 && groupRes && Object.keys(groupRes).length > 0) {
 			if(groupResByKeyNameSatisfied(groupRes, kvp.k)) {
@@ -472,18 +482,18 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 			}
 		}
 		else {
-			var groupRes = {};
+			groupRes = {};
 		}
 
-		for(var j in attributeName) { // loop through desired attribute names
+		for(let j in attributeName) { // loop through desired attribute names
 
-			var attr = attributeName[j];
+			let attr = attributeName[j];
 
 			if(!el[attr]) { continue; }
 
 			// if a matching expression is provided
 			if(matchingExpression && matchingExpression[j]) {
-				var re = new RegExp(matchingExpression[j], matchingExpressionFlags[j]);
+				let re = new RegExp(matchingExpression[j], matchingExpressionFlags[j]);
 				if(!re.test(el[attr])) { continue; }
 			}
 
@@ -507,7 +517,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 					groupRes = addValue(groupRes, kvpK, kvpV);
 				}
 
-				for(var k in kvp.k) {
+				for(let k in kvp.k) {
 
 					kvp.k[k].attributeName = kvp.k[k].attributeName || null;
 					kvp.k[k].matchingExpression = kvp.k[k].matchingExpression || null;
@@ -516,7 +526,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 					kvp.k[k].mode = kvp.k[k].mode || null;
 
 					if(attr == kvp.k[k].attributeName) {
-						var re = new RegExp(kvp.k[k].matchingExpression, kvp.k[k].matchingExpressionFlags);
+						let re = new RegExp(kvp.k[k].matchingExpression, kvp.k[k].matchingExpressionFlags);
 						if(re.test(el[attr])) {
 							if(kvp.k[k].mode == 'after') {
 								kvpKNext = kvp.k[k].name ? kvp.k[k].name : true;
@@ -531,7 +541,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 
 				}
 
-				for(var k in kvp.v) {
+				for(let k in kvp.v) {
 
 					kvp.v[k].attributeName = kvp.v[k].attributeName || null;
 					kvp.v[k].matchingExpression = kvp.v[k].matchingExpression || null;
@@ -540,7 +550,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 					kvp.v[k].mode = kvp.v[k].mode || null;
 
 					if(attr == kvp.v[k].attributeName) {
-						var re = new RegExp(kvp.v[k].matchingExpression, kvp.v[k].matchingExpressionFlags);
+						let re = new RegExp(kvp.v[k].matchingExpression, kvp.v[k].matchingExpressionFlags);
 						if(re.test(el[attr])) {
 							if(kvp.v[k].mode == 'after') {
 								kvpKNext = false;
@@ -782,16 +792,16 @@ commands.Register('screenshot', (data, step, callback) => {
 
 commands.Register('scrollPageTo', (data, step, callback) => {
 
-	var data          = data[step].data || {};
-	var to            = data.to || 'end';
-	var timeout       = data.timeout || 60;
-	var scrolls       = 0;
-	var maxScrolls    = data.maxScrolls || null;
-	var maxRetries    = data.maxRetries || 5;
-	var startTime     = Math.floor(Date.now() / 1000);
-	var prevScrollTop = 0;
-	var tries         = 0;
-	var scrollTop     = 0;
+	data = data[step].data || {};
+	let to            = data.to || 'end';
+	let timeout       = data.timeout || 60;
+	let scrolls       = 0;
+	let maxScrolls    = data.maxScrolls || null;
+	let maxRetries    = data.maxRetries || 5;
+	let startTime     = Math.floor(Date.now() / 1000);
+	let prevScrollTop = 0;
+	let tries         = 0;
+	let scrollTop     = 0;
 
 	let evalScroll = (to) => {
 		switch(to) {
