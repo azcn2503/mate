@@ -14,6 +14,7 @@ class Commands {
 
 		this.commands = {};
 
+		this.mate = null;
 		this.webdriver = null;
 		this.driver = null;
 
@@ -21,6 +22,7 @@ class Commands {
 
 	Attach(mate) {
 
+		this.mate = mate;
 		this.webdriver = mate.webdriver;
 		this.driver = mate.driver;
 
@@ -241,17 +243,22 @@ commands.Register('email', (data, step, callback) => {
 	let fromStep = data[step].data.fromStep;
 	let usingExpression = data[step].data.usingExpression || null;
 	let resultData = data[fromStep].result.data;
+	let pad = data[step].data.pad || '    ';
+	let nl2br = data[step].data.nl2br || true;
 
 	if(usingExpression) {
 		resultData = jexpr(resultData, usingExpression);
 	}
 
+	let dataStr = pad ? JSON.stringify(resultData, null, pad) : JSON.stringify(resultData);
+	dataStr = nl2br ? dataStr.replace(/[\n\r]/g, '<br />') : dataStr;
+
 	let mailOptions = {
 		from: 'mate <azcn2503@gmail.com>',
 		to: data[step].data.to || 'azcn2503@gmail.com',
 		subject: data[step].data.subject || 'mate results',
-		text: JSON.stringify(resultData),
-		html: '<h1>mate results</h1><p style="font-family: monospace; padding: 5px; background-color: #ddd;">' + JSON.stringify(resultData) + '</p>'
+		text: dataStr,
+		html: `<h1>mate results</h1><p>Results from your mate campaign: ${commands.mate.campaign.id}</p><p style="font-family: monospace; padding: 5px; background-color: #ddd;">${dataStr}</p>`
 	};
 
 	transporter.sendMail(mailOptions, function(error, info) {
