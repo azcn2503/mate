@@ -626,22 +626,6 @@ Example:
 
 ---
 
-### suggestSelector
-**data**: `data string`
-
-Used to query what is on the remotely loaded page. Useful for finding out what is on the page when you are not sure of what selector to use. It will convert your query in to the most loose form possible. It can be used to search for partial tag names, partial class names and partial ids. It should return an array of valid selectors.
-
-Example:
-
-    {
-        "command": "suggestSelector",
-        "data": "b>d s.c"
-    }
-
-Expected response might be: `body>div span.cool-class`
-
----
-
 ### Common Command Variables
 
 #### fromStep

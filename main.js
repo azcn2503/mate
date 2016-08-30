@@ -146,7 +146,7 @@ class Mate2 {
 		this.data[this.step].processed = true;
 		this.data[this.step].result = res;
 
-		console.log(res);
+		console.log(JSON.stringify(res));
 		console.log('---');
 
 		if (command.command == 'done') {

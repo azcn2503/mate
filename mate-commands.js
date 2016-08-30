@@ -1,7 +1,5 @@
-let events    = require('events');
 let fs        = require('fs');
 let jexpr     = require('./lib/jexpr/jexpr.js');
-let vm        = require('vm');
 let nodemailer = require('nodemailer');
 let transporter = nodemailer.createTransport();
 let mkdirp = require('mkdirp');
@@ -59,11 +57,11 @@ commands.Register('acceptAlert', (data, step, callback) => {
 		alert.getText().then( function success(text) {
 			alert.accept();
 			callback({success: true, data: text});
-		}).then(null, function error() {
-			callback({success: false});
+		}).then(null, (err) => {
+			callback({success: false, message: err});
 		});
-	}).then(null, function error() {
-		callback({success: false});
+	}).then(null, (err) => {
+		callback({success: false, message: err});
 	});
 });
 
@@ -176,8 +174,6 @@ commands.Register('assert', (data, step, callback) => {
 
 	else {
 
-		console.log('just one');
-
 		res = this.assertItem(resultData, operator, expected);
 
 	}
@@ -188,11 +184,11 @@ commands.Register('assert', (data, step, callback) => {
 commands.Register('click', (data, step, callback) => {
 	let selector = data[step].data;
 
-	commands.driver.findElement(commands.webdriver.By.css(selector)).then( function success(el) {
+	commands.driver.findElement(commands.webdriver.By.css(selector)).then( (el) => {
 		el.click();
 		callback({success: true});
-	}).then( null, function error(error) {
-		callback({success: false});
+	}).then( null, (err) => {
+		callback({success: false, message: err});
 	});
 });
 
@@ -235,13 +231,20 @@ commands.Register('done', (data, step, callback) => {
 		if(!/\.json$/.test(fileName)) { fileName += '.json'; }
 		mkdirp('output/', (err) => {
 			if (err) {
-				callback({ success: false });
+				callback({ success: false, message: err });
 				return false;
 			}
-			fs.writeFileSync(fileName, JSON.stringify(data, null, '\t'), { encoding: 'utf-8' });
-			callback({fileName: fileName, success: true});
-			return true;
+			fs.writeFile(fileName, JSON.stringify(data, null, '\t'), { encoding: 'utf-8' }, (err) => {
+				if (err) {
+					callback({ success: false, message: err });
+					return false;
+				}
+				callback({fileName: fileName, success: true});
+			});
 		});
+	}
+	else {
+		callback({ success: true });
 	}
 });
 
@@ -389,68 +392,57 @@ commands.Register('extractTable', (data, step, callback) => {
 
 commands.Register('getAttributeValues', function (data, step, callback) {
 
-	var self = this;
+	let generateKey = (key, unique) => {
 
-	this.generateKey = function(key, unique) {
-
-		if(self.uniqueKey) {
-			key = '_' + self.keyIndex + '_' + key;
-			self.keyIndex++;
+		if (this.uniqueKey) {
+			key = `_${this.keyIndex}_${key}`;
+			this.keyIndex++;
 		}
-		
 		return key;
 
 	};
 
-	this.addKey = function(res, key) {
+	let addKey = (res, key) => {
 
 		res[key] = res[key] ? res[key] : '';
-
 		return res;
 
 	};
 
-	this.addValue = function(res, key, val) {
+	let addValue = (res, key, val) => {
 
-		if(!val || val == '') { return res; }
-
-		if(!res[key]) { res = self.addKey(res, key); }
-
+		if (!val || val == '') { return res; }
+		if (!res[key]) { res = addKey(res, key); }
 		res[key] += val;
-
 		return res;
 
 	};
 
-	this.groupResByKeyNameSatisfied = function(res, keys) {
+	let groupResByKeyNameSatisfied = (res, keys) => {
 
-		var tmpName = 0;
-		var tmpMatch = 0;
-		for(var i in keys) {
-			if(keys[i].name) {
-				tmpName++;
-				if(groupRes[keys[i].name]) {
-					tmpMatch++;
-				}
-			}
+		let tmpName = 0;
+		let tmpMatch = 0;
+		for (let i in keys) {
+			if (!keys[i].name) { continue; }
+			tmpName++;
+			if (!groupRes[keys[i].name]) { continue; }
+			tmpMatch++;
 		}
-		if(tmpName == tmpMatch) {
-			return true;
-		}
+		if (tmpName == tmpMatch) { return true; }
 		return false;
 
 	};
 
-	var fromStep                = data[step].data.fromStep || step - 1; // required
-	var attributeName           = data[step].data.attributeName; // required
-	var matchingExpression      = data[step].data.matchingExpression || null;
-	var matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
-	var kvp                     = data[step].data.kvp || null;
-	var group                   = data[step].data.group || false;
-	var usingExpression = data[step].data.usingExpression || null;
-	var resultData            = data[fromStep].result.data;
+	let fromStep                = data[step].data.fromStep || step - 1; // required
+	let attributeName           = data[step].data.attributeName; // required
+	let matchingExpression      = data[step].data.matchingExpression || null;
+	let matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
+	let kvp                     = data[step].data.kvp || null;
+	let group                   = data[step].data.group || false;
+	let usingExpression = data[step].data.usingExpression || null;
+	let resultData            = data[fromStep].result.data;
 
-	if(usingExpression) { resultData = jexpr(resultData, usingExpression); console.log('resultData', resultData); }
+	if (usingExpression) { resultData = jexpr(resultData, usingExpression); }
 
 	// key value pair settings
 	if(kvp) {
@@ -466,16 +458,16 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 	if(typeof(matchingExpression) === 'string') { matchingExpression = [matchingExpression]; }
 	if(typeof(matchingExpressionFlags) === 'string') { matchingExpressionFlags = [matchingExpressionFlags]; }
 
-	var res = [];
+	let res = [];
 
-	var kvpK = kvpKNext = kvpV = kvpVNext = tmp = null;
+	let kvpK = kvpKNext = kvpV = kvpVNext = tmp = null;
 
-	for(var i in resultData) { // loop through each element
+	for(let i in resultData) { // loop through each element
 
-		var el = resultData[i];
+		let el = resultData[i];
 
 		if(kvp && kvp.groupByKeyName && kvp.k.length > 0 && groupRes && Object.keys(groupRes).length > 0) {
-			if(self.groupResByKeyNameSatisfied(groupRes, kvp.k)) {
+			if(groupResByKeyNameSatisfied(groupRes, kvp.k)) {
 				groupRes = {};
 			}
 		}
@@ -504,15 +496,15 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 				if(typeof(kvp.v) === 'string') { kvp.v = [kvp.v]; }
 
 				if(kvpKNext) {
-					kvpK = typeof(kvpKNext) === 'string' ? self.generateKey(kvpKNext) : self.generateKey(el[attr]);
+					kvpK = typeof(kvpKNext) === 'string' ? generateKey(kvpKNext) : generateKey(el[attr]);
 					kvpKNext = false;
-					groupRes = self.addKey(groupRes, kvpK); 
+					groupRes = addKey(groupRes, kvpK); 
 				}
 				
 				if(kvpVNext) {
 					kvpV = el[attr];
 					kvpVNext = false;
-					groupRes = self.addValue(groupRes, kvpK, kvpV);
+					groupRes = addValue(groupRes, kvpK, kvpV);
 				}
 
 				for(var k in kvp.k) {
@@ -531,8 +523,8 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 								kvpVNext = false;
 								break;
 							}
-							kvpK = kvp.k[k].name || self.generateKey(el[attr]);
-							groupRes = self.addKey(groupRes, kvpK);
+							kvpK = kvp.k[k].name || generateKey(el[attr]);
+							groupRes = addKey(groupRes, kvpK);
 							break;
 						}
 					}
@@ -556,7 +548,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 								break;
 							}
 							kvpV = el[attr];
-							groupRes = self.addValue(groupRes, kvpK, kvpV);
+							groupRes = addValue(groupRes, kvpK, kvpV);
 							break;
 						}
 					}
@@ -582,7 +574,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 			}
 			if(kvp) {
 				if(kvp.groupByKeyName) {
-					if(self.groupResByKeyNameSatisfied(groupRes, kvp.k)) {
+					if(groupResByKeyNameSatisfied(groupRes, kvp.k)) {
 						res.push(groupRes);
 					}
 				}
@@ -665,10 +657,10 @@ commands.Register('matchEach', (data, step, callback) => {
 
 commands.Register('open', (data, step, callback) => {
 	let url = data[step].data;
-	commands.driver.get(url).then(function success() {
+	commands.driver.get(url).then( () => {
 		callback({success: true});
-	}).then(null, function error() {
-		callback({success: false});
+	}).then(null, (err) => {
+		callback({success: false, message: err});
 	});
 });
 
@@ -719,8 +711,7 @@ commands.Register('runScript', (data, step, callback) => {
 	commands.driver.executeScript(evalScript, script).then(function success() {
 		callback({success: true});
 	}).then(null, function error(err) {
-		console.log(err);
-		callback({success: false});
+		callback({success: false, message: err});
 	});
 
 });
@@ -748,9 +739,7 @@ commands.Register('save', (data, step, callback) => {
 	mkdirp('commands/save', function(err) {
 		if(err) { 
 			callback({
-				data: {
-					error: err
-				},
+				message: err,
 				success: false
 			});
 			return;
@@ -775,7 +764,7 @@ commands.Register('screenshot', (data, step, callback) => {
 
 	mkdirp('commands/screenshot', function(err) {
 		if(err) {
-			callback({success: false, error: err});
+			callback({success: false, message: err});
 			return;
 		}
 		commands.driver.takeScreenshot().then( function success(data) {
@@ -793,9 +782,6 @@ commands.Register('screenshot', (data, step, callback) => {
 
 commands.Register('scrollPageTo', (data, step, callback) => {
 
-	console.log('scrolling page to a point');
-
-	var self          = this;
 	var data          = data[step].data || {};
 	var to            = data.to || 'end';
 	var timeout       = data.timeout || 60;
@@ -807,9 +793,7 @@ commands.Register('scrollPageTo', (data, step, callback) => {
 	var tries         = 0;
 	var scrollTop     = 0;
 
-	this.eventEmitter = new events.EventEmitter();
-
-	var evalScroll = function(to) {
+	let evalScroll = (to) => {
 		switch(to) {
 			case 'home':
 				window.scrollTo(0, 0);
@@ -824,17 +808,19 @@ commands.Register('scrollPageTo', (data, step, callback) => {
 		return document.body.scrollTop;
 	};
 
-	this.eventEmitter.on('scroll', function() {
+	let scroll = () => {
 
-		commands.driver.executeScript(evalScroll, to).then( function(scrollTop) {
-			self.eventEmitter.emit('processScroll', scrollTop);
+		commands.driver.executeScript(evalScroll, to).then( (scrollTop) => {
+			processScroll(scrollTop);
+		}).then(null, (err) => {
+			callback({ success: false, message: err });
 		});
 
-	});
+	};
 
-	this.eventEmitter.on('processScroll', function(scrollTop) {
+	let processScroll = (scrollTop) => {
 
-		var processScrollTime = Math.floor(Date.now() / 1000);
+		let processScrollTime = Math.floor(Date.now() / 1000);
 		scrolls++;
 
 		let scrollDiff = scrollTop - prevScrollTop;
@@ -854,32 +840,21 @@ commands.Register('scrollPageTo', (data, step, callback) => {
 		if(	(maxScrolls && scrolls >= maxScrolls)
 		|| (maxRetries && tries >= maxRetries)
 		|| (processScrollTime - startTime >= timeout) ) {
-			self.eventEmitter.emit('done', scrollTop);
-			return;
-		}
-		else { // scroll again if no limits exceeded
-			setTimeout( function() {
-				self.eventEmitter.emit('scroll');
-			}, 1000);
+			callback({
+				success: true,
+				data: { scrollTop: scrollTop }
+			});
+			return true;
 		}
 
-	});
+		// scroll again if no limits exceeded
+		setTimeout( () => {
+			scroll();
+		}, 1000);
 
-	this.eventEmitter.on('done', function(scrollTop) {
+	};
 
-		prevScrollTop = scrollTop;
-		callback({
-			data: {
-				'scrollTop': scrollTop
-			},
-			success: true
-		});
-		return;
-
-	});
-
-	this.eventEmitter.emit('scroll');
-	return;
+	scroll();
 
 });
 
@@ -1114,117 +1089,10 @@ commands.Register('submitForm', (data, step, callback) => {
 		return true;
 	};
 
-	commands.driver.executeScript(evalSubmit, selector).then(function success() {
+	commands.driver.executeScript(evalSubmit, selector).then( () => {
 		callback({success: true});
-	}).then(null, function error() {
-		callback({success: false});
-	});
-
-});
-
-commands.Register('suggestSelector', (data, step, callback) => {
-
-	let selector = data[step].data;
-
-	let evalSuggest = function(selector, mode, inContext) {
-
-		let self = this;
-		
-		this.returnNodes = function(nodes) {
-			
-			if(self.mode == 'native') {
-				// Return an array of native elements
-				let arr = [];
-				for(let i in nodes) {
-					if(typeof(nodes[i]) !== 'object') { continue; }
-					arr.push(nodes[i]);
-				}
-				return arr;
-			}
-			
-			if(self.mode == 'array' || self.mode == 'object') { 
-				let obj = {};
-				for(let i in nodes) {
-					if(!nodes[i] || !nodes[i].tagName) {
-						continue;
-					}
-					let tagString = self.inContext ? self.context == 'tag' ? nodes[i].tagName : '' : nodes[i].tagName;
-					let id = self.inContext ? self.context == 'id' ? nodes[i].id : '' : nodes[i].id;
-					id = id ? '#' + id : id;
-					let classString = '';
-					if(self.inContext && self.context == 'class') {
-						let classes = nodes[i].className.split(' ');
-						for(let i in classes) {
-							if(classes[i] == '') { continue; }
-							classString += '.' + classes[i];
-						}
-					}
-					let selector = tagString + id + classString;
-					obj[selector] = true;
-				}
-				if(self.mode == 'object') { return obj; } // Return a simple object of selectors
-				let arr = [];
-				for(let i in obj) {
-					arr.push(i);
-				}
-				return arr; // Return a simple array of selectors
-			}
-			
-		};
-		
-		this.mode = mode || 'array';
-		this.inContext = inContext || false;
-		this.context = 'tag';
-		let tagHint = null;
-		let tagHints = [];
-		
-		let contexts = {
-			'#': 'id',
-			'.': 'class'
-		};
-		
-		// get context when in context mode
-		let lastSeparator = selector.match(/([> #.])(?=[^> #.]*$)/);
-		if(this.inContext && lastSeparator) {
-			lastSeparator = lastSeparator[0];
-			if(contexts[lastSeparator]) { this.context = contexts[lastSeparator]; }
-		}
-		
-		// add _tagName attribute to all elements (make tag names searchable)
-		for(let i = 0, els = document.querySelectorAll('*'), elsLength = els.length; i < elsLength; i++) {
-			if(!els[i] || !els[i].tagName) { continue; }
-			els[i].setAttribute('_tagName', els[i].tagName.toLowerCase());
-		}
-		
-		// generate the new query
-		let newSelector = [];
-		selector.split(',').forEach(function(el, i) {
-			el = el.replace(/(^|[> #.])([^> #.]*)/gi, function(match, p1, p2) {
-				if(p1 != '.' && p1 != '#') {
-					if(p2 == '' || p2 == '*') { return p1 + '*'; }
-					return p1 + '[_tagName^=' + p2 + ']';
-				}
-				return p1 + p2;
-			}).replace(/([#.])([a-z0-9\-_:]*)/gi, function(match, p1, p2) {
-				let attr = contexts[p1];
-				if(p2 == '') { return '[' + attr + ']'; }
-				return '[' + attr + '*=' + p2 + ']';
-			});
-			newSelector.push(el);
-		});
-		newSelector = newSelector.join(',');
-		
-		// execute the query on the current page
-		let nodes = document.querySelectorAll(newSelector);
-		
-		return this.returnNodes(nodes);
-		
-	}
-
-	commands.driver.executeScript(evalSuggest, selector, 'array').then(function success(success) {
-		callback({success: true, data: success});
-	}).then(null, function error() {
-		callback({success: false});
+	}).then(null, (err) => {
+		callback({success: false, message: err});
 	});
 
 });
