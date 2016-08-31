@@ -1,5 +1,4 @@
 let fs       = require('fs');
-let mkdirp = require('mkdirp');
 let args     = process.argv;
 if (args.length < 3) { process.exit(); }
 
@@ -16,6 +15,7 @@ class Mate2 {
 
 		this.fileName = '';
 		this.sourceData = [];
+		this.data = [];
 		this.step = 0;
 
 		this.stepNames = {};
@@ -28,10 +28,11 @@ class Mate2 {
 
 	}
 
-	BuildDriver(type = 'phantomjs') {
+	BuildDriver(type = 'phantomjs', implicitWait = 10000) {
 
 		this.webdriver = require('selenium-webdriver');
 		this.driver = new this.webdriver.Builder().withCapabilities(this.webdriver.Capabilities[type]()).build();
+		this.driver.manage().timeouts().implicitlyWait(implicitWait);
 
 	}
 
@@ -63,7 +64,11 @@ class Mate2 {
 		}
 
 		let data = JSON.parse(content);
-		this.data = this.data || data;
+		for (let i in data) {
+			if (!this.data[i]) {
+				this.data[i] = data[i];
+			}
+		}
 
 		this.step = 0;
 		this.ProcessCommand();
@@ -132,7 +137,7 @@ class Mate2 {
 		this.step++;
 
 		if(this.step >= this.data.length) {
-			this.WaitForCommands('Out of commands');
+			this.WaitForCommands();
 			return false;
 		}
 		this.ProcessCommand();
@@ -186,7 +191,6 @@ class Mate2 {
 let mate = new Mate2();
 mate.SetCampaign(args[2]);
 mate.InjectArguments();
-mate.BuildDriver('chrome');
 let commands = require('./mate-commands').commands;
 commands.Attach(mate);
 mate.Load();

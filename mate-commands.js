@@ -24,7 +24,12 @@ class Commands {
 		this.webdriver = mate.webdriver;
 		this.driver = mate.driver;
 
-		this.driver.manage().timeouts().implicitlyWait(1000);
+	}
+
+	List() {
+
+		let list = Object.keys(this.commands);
+		return list.join(', ');
 
 	}
 
@@ -41,6 +46,7 @@ class Commands {
 		
 		if (!this.commands[command] || !this.commands.hasOwnProperty(command)) {
 			console.log(`The command: ${command}, does not exist.`);
+			console.log(`The available commands are: ${this.List()}.`);
 			return false;
 		}
 
@@ -443,7 +449,7 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 
 	let fromFile = data[step].data.fromFile || null;
 	let fromStep                = data[step].data.fromStep || step - 1; // required
-	let attributeName           = data[step].data.attributeName; // required
+	let attributeName           = typeof(data[step].data === 'string') ? data[step].data : data[step].data.attributeName; // required
 	let matchingExpression      = data[step].data.matchingExpression || null;
 	let matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 	let kvp                     = data[step].data.kvp || null;
@@ -667,6 +673,10 @@ commands.Register('matchEach', (data, step, callback) => {
 
 commands.Register('open', (data, step, callback) => {
 	let url = data[step].data;
+	if (!commands.driver) {
+		commands.mate.BuildDriver('chrome');
+		commands.Attach(commands.mate);
+	}
 	commands.driver.get(url).then( () => {
 		callback({success: true});
 	}).then(null, (err) => {
@@ -728,9 +738,9 @@ commands.Register('runScript', (data, step, callback) => {
 
 commands.Register('save', (data, step, callback) => {
 
-	let fromStep     = data[step].data.fromStep;
+	let fromStep     = data[step].data.fromStep || step - 1;
 	let usingExpression = data[step].data.usingExpression || null;
-	let fileName     = data[step].data.fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0');
+	let fileName     = typeof(data[step].data) === 'string' ? data[step].data : data[step].data.fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0');
 	let fileType     = data[step].data.fileType || 'json';
 	let resultData = data[fromStep].result.data;
 
@@ -1104,6 +1114,16 @@ commands.Register('submitForm', (data, step, callback) => {
 	}).then(null, (err) => {
 		callback({success: false, message: err});
 	});
+
+});
+
+commands.Register('useBrowser', (data, step, callback) => {
+
+	let browserName = typeof(data[step].data) === 'string' ? data[step].data : data[step].data.browserName || 'chrome';
+	let implicitWait = data[step].data.implicitWait || 10000;
+	commands.mate.BuildDriver(browserName, implicitWait);
+	commands.Attach(commands.mate);
+	callback({ success: true });
 
 });
 
