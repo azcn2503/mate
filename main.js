@@ -14,7 +14,6 @@ class Mate2 {
 		};
 
 		this.fileName = '';
-		this.sourceData = [];
 		this.data = [];
 		this.step = 0;
 
@@ -92,13 +91,22 @@ class Mate2 {
 
 		let command = this.data[this.step];
 
+		let mateArgs = {
+			'time': () => { return Date.now(); },
+			'random': () => { return Math.random(); }
+		};
+
+		// replace variables in data with mate variables
+		for (let i in Object.keys(mateArgs)) {
+			let key = Object.keys(mateArgs)[i];
+			let exp = new RegExp('{{args\.mate\.' + key + '}}', 'g');
+			this.data[this.step] = JSON.parse(JSON.stringify(this.data[this.step]).replace(exp, mateArgs[key]()));
+		}
+
 		// replace variables in data with variables from command line
-		if (Object.keys(this.args).length != 0) {
-			for(let i in this.args) {
-				let regexp = new RegExp('{{args\.' + i + '}}', 'g');
-				this.data[this.step] = JSON.parse(JSON.stringify(command).replace(regexp, this.args[i]));
-				//console.log(command);
-			}
+		for (let i in this.args) {
+			let exp = new RegExp('{{args\.' + i + '}}', 'g');
+			this.data[this.step] = JSON.parse(JSON.stringify(this.data[this.step]).replace(exp, this.args[i]));
 		}
 
 		if(typeof(command) !== 'object' || !command.command) {

@@ -719,6 +719,52 @@ commands.Register('repeat', (data, step, callback) => {
 
 });
 
+commands.Register('runCampaign', (data, step, callback) => {
+
+	if (!data[step].data) { callback({ success: false, message: 'Need to provide data for this command' }); return false; }
+
+	let campaign = typeof(data[step].data) === 'string' ? data[step].data : data[step].data.campaign || null;
+	let withArgs = data[step].data.withArgs || {};
+	let usingData = data[step].data.usingData || {};
+	usingData.fromFile = usingData.fromFile || null;
+	usingData.fromStep = usingData.fromStep || step - 1;
+	usingData.asArgument = usingData.asArgument || 'initial';
+	let resultData = usingData.fromFile ? commands.LoadFromFile(usingData.fromFile) : data[usingData.fromStep].result.data || [];
+
+	let withArgsArr = [];
+	for (let i in Object.keys(withArgs)) {
+		let key = Object.keys(withArgs)[i];
+		withArgsArr.push(`--${key}=${withArgs[key]}`);
+	}
+
+	let spawn = require('child_process').spawn;
+
+	let iterateResultData = (n = 0) => {
+
+		if (!resultData[n]) { callback({ success: true, iterations: n }); return true; }
+
+		let args = ['main.js', campaign, `--${usingData.asArgument}=${resultData[n]}`, ...withArgsArr]
+		console.log('Spawning node process with the following arguments: ', args);
+		let mateChild = spawn('node', args);
+
+		let logData = (data) => {
+			data = data.toString().trim().replace(/[\n\r]/g, '\n    ');
+			console.log(`    ${data}`);
+		};
+
+		mateChild.stdout.on('data', logData);
+		mateChild.stderr.on('data', logData);
+
+		mateChild.on('close', (code) => {
+			iterateResultData(n + 1);
+		});
+
+	};
+
+	iterateResultData();
+
+});
+
 commands.Register('runScript', (data, step, callback) => {
 
 	let script = data[step].data;
