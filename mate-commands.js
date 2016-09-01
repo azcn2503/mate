@@ -1173,6 +1173,17 @@ commands.Register('useBrowser', (data, step, callback) => {
 
 });
 
+commands.Register('wait', (data, step, callback) => {
+
+	let ms = data[step].data || 1000;
+	if (isNaN(ms)) { callback({ success: false, message: 'You must specify a number of milliseconds to wait'}); return false; }
+
+	setTimeout( () => {
+		callback({ success: true });
+	}, ms);
+
+});
+
 commands.Register('waitForPageToLoad', (data, step, callback) => {
 
 	let evalWaitForPageToLoad = () => {
