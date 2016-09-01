@@ -39,7 +39,7 @@ class Mate2 {
 
 		for (let i = 3; i < args.length; i++) {
 			if(!args[i] || args[i].indexOf('--') == -1) { break; }
-			var kvp = args[i].match(/--(.+)?=(.+)/);
+			var kvp = args[i].match(/--(.+?)=(.+)/);
 			var k = kvp[1].replace(/[\"\=]/g, '').trim();
 			var v = kvp[2].replace(/[\"\=]/g, '').trim();
 			this.args[k] = v;

@@ -1173,4 +1173,27 @@ commands.Register('useBrowser', (data, step, callback) => {
 
 });
 
+commands.Register('waitForPageToLoad', (data, step, callback) => {
+
+	let evalWaitForPageToLoad = () => {
+
+		let isLoaded = () => {
+
+			if (document.readyState == 'complete') { return true; }
+			setTimeout( () => { isLoaded(); }, 1000);
+
+		};
+
+		return isLoaded();
+
+	};
+
+	commands.driver.executeScript(evalWaitForPageToLoad).then( () => {
+		callback({success: true});
+	}).then(null, (err) => {
+		callback({success: false, message: err});
+	});
+
+});
+
 exports.commands = commands;
