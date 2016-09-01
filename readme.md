@@ -626,6 +626,35 @@ Example:
 
 ---
 
+#### wait
+
+Waits a number of milliseconds as defined in the data. The default milliseconds to wait is 1000 (1 second).
+
+Example:
+
+    {
+        "command": "wait",
+        "data": "5000"
+    }
+
+Waits 5 seconds before completing the command.
+
+---
+
+#### waitForPageToLoad
+
+Waits for the current page to load. This is determined by the `document.readyState` which will return `complete` when the page is loaded.
+
+Example:
+
+    {
+        "command": "waitForPageToLoad"
+    }
+
+Will simply wait for the page to load.
+
+---
+
 ### Common Command Variables
 
 #### fromStep
