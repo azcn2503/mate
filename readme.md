@@ -72,7 +72,7 @@ Every step must have a `command` string, and optionally a mixed `data` object, l
 
 Some commands require that `data` be an object with mixed content, like the `getAttributeValues` command
 
-Steps that require data from previously executed steps will allow a `fromStep` property, you can follow this with either the step number (first step is 0, second step is 1, etc.) or alternatively if you have named your step you can simply use the step name! In the soundcloud example above, you could use `"selectAllUsernameLinks"` instead of `2` in the `getAttributeValues` command.
+Steps that require data from previously executed steps will allow a `fromStep` property, you can follow this with either the step number (first step is 0, second step is 1, etc.). If no step number is provided, the result data from the previous step will be used by default.
 
 When a campaign file is saved it will save additional information against each step, like so:
 
@@ -101,10 +101,10 @@ For our above example we might do this:
 
     {
         "command": "done",
-        "data": "soundcloud-output"
+        "data": "google-output"
     }
 
-And it will save as `soundcloud-output.json`.
+And it will save as `google-output.json`.
 
 #### Variables
 
