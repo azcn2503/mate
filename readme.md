@@ -9,53 +9,55 @@ Mate is still under development and was recently opened for public consumption (
 ## Prerequisites
 
 * PhantomJS or ChromeDriver
-* Node (make sure to install the dependencies!)
+* Node.js version 6 or above
+
+Run the following command to check your Node.js version:
+
+    node --version
+
+Verify that you Node.js is at least version 6. If not, download it from http://www.nodejs.org or use your distributions package manager to obtain it if you're running Linux.
+
+Clone the repository to some folder on your system then `cd` to it.
+
+Run the following command to make sure all the required packages are installed and up to date:
+
+    npm install
+
+Once this completes, you should be ready to roll!
     
 ## Usage
 
-Check out the following `soundcloud.json` campaign file. These campaign files tell the Mate application what to do with a webpage:
+You will need to create a campaign file before you run Mate for the first time. A campaign file is simply a JSON file containing one array with one or more steps objects.
+
+Check out the following `google.json` campaign file. This file tells the Mate application what to do with a webpage:
 
     [
         {
             "command": "open",
-            "data": "http://www.soundcloud.com/anjunadeep/following"
+            "data": "http://www.google.com"
         },
         {
-            "command": "scrollPageToEnd"
+            "command": "search",
+            "data": "Aaron Cunnington"
         },
         {
             "command": "selectAll",
-            "data": "a.userAvatarBadge__usernameLink",
-            "name": "selectAllUsernameLinks"
+            "data": "h3.r > a"
         },
         {
             "command": "getAttributeValues",
-            "data": {
-                "fromStep": 2,
-                "attributeName": "href",
-                "matchingExpression": "an"
-            }
+            "data": "href"
         },
         {
-            "command": "matchEach",
-            "data": {
-                "fromStep": 3,
-                "matchingExpression": "[^/]*$",
-                "mode": "match"
-            }
-        },
-        {
-            "command": "save"
+            "command": "done"
         }
     ]
 
 You can process it by running:
 
-    node main.js soundcloud
+    node main.js google
 
-You will see the commands, data and results output to the console.
-
-Then you can open `soundcloud.json` to view the full results!
+You will see the results output to the console as Mate runs the commands.
     
 ### Campaign Files
 
@@ -77,10 +79,6 @@ When a campaign file is saved it will save additional information against each s
     {
         "command": "open",
         "data": "www.google.com",
-        "performance": {
-            "start": 123456789,
-            "end": 123456790
-        },
         "result": {
             "success": true
         },
@@ -88,8 +86,6 @@ When a campaign file is saved it will save additional information against each s
         "processed": true,
         "step": 0
     }
-
-`performance.start` is the time in microseconds when the command started, and `performance.end` is the time in microseconds when the command finished.
 
 `result` contains the output from the command, it can be various things, but usually will contains `success` denoting whether the command failed or succeeded.
 
@@ -124,6 +120,13 @@ All variables should be prefixed with `args.` as demonstrated above.
 Be sure to start the application like this:
 
     node main.js campaignfile --username=businessguy
+
+If you run a campaign file from within another campaign using the `runCampaign` command, it will by default pass the result data from the previous command as the variable `{{args.initial}}`.
+
+There are some dynamic variables you can use:
+
+    {{args.mate.time}} - The time in milliseconds
+    {{args.mate.random}} - A random number
     
 ### Commands
 
