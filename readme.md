@@ -127,7 +127,7 @@ There are some dynamic variables you can use:
 
     {{args.mate.time}} - The time in milliseconds
     {{args.mate.random}} - A random number
-    {{args.mate.eval('Math.floor(Math.random() * 1000)')}} - Return some evaluated code
+    {{args.mate.eval(Math.floor(Math.random() * 1000))}} - Return some evaluated code
 
 ### Commands
 
