@@ -21,6 +21,7 @@ class Mate2 {
 		this.stepHashes = [];
 
 		this.args = {};
+		this.mateArgs = {};
 
 		this.webdriver = null;
 		this.driver = null;
@@ -91,21 +92,23 @@ class Mate2 {
 
 		let command = this.data[this.step];
 
-		let mateArgs = {
-			'time': () => { return Date.now(); },
-			'random': () => { return Math.random(); }
-		};
-
 		// replace variables in data with mate variables
-		for (let i in Object.keys(mateArgs)) {
-			let key = Object.keys(mateArgs)[i];
-			let exp = new RegExp('{{args\.mate\.' + key + '}}', 'g');
-			this.data[this.step] = JSON.parse(JSON.stringify(this.data[this.step]).replace(exp, mateArgs[key]()));
+		let exp = /\{\{args.mate.(.+?)(\((.+)\)){0,1}\}\}/gi;
+		let commandStr = JSON.stringify(this.data[this.step]);
+		let matches = exp.exec(commandStr);
+		if (matches) {
+			while (1) {
+				let key = matches[1];
+				if (!this.mateArgs[key]) { break; }
+				let data = matches[3] || null;
+				this.data[this.step] = JSON.parse(commandStr.replace(exp, this.mateArgs[key](data)));
+				break;
+			}
 		}
 
 		// replace variables in data with variables from command line
 		for (let i in this.args) {
-			let exp = new RegExp('{{args\.' + i + '}}', 'g');
+			let exp = new RegExp('\{\{args\.' + i + '\}\}', 'g');
 			this.data[this.step] = JSON.parse(JSON.stringify(this.data[this.step]).replace(exp, this.args[i]));
 		}
 
@@ -120,6 +123,14 @@ class Mate2 {
 			this.stepNames[command.name] = this.step;
 		}
 
+		// Replace a fromStep name with a fromStep number, if available
+		if (command.data && command.data.fromStep && typeof(command.data.fromStep) == 'string') {
+			if (this.stepNames[command.data.fromStep]) {
+				this.data[this.step].data.fromStep = this.stepNames[command.data.fromStep];
+			}
+		}
+
+		// Skip this step if it has already been processed, or if it is a setup step
 		if(command.setup || (command.processed && !this.forceRetry)) {
 			this.ProcessNextCommand();
 			return false;
@@ -194,11 +205,20 @@ class Mate2 {
 
 	}
 
+	RegisterMateArg(name, func) {
+
+		this.mateArgs[name] = func;
+
+	}
+
 }
 
 let mate = new Mate2();
 mate.SetCampaign(args[2]);
 mate.InjectArguments();
+mate.RegisterMateArg('random', () => { return Math.random(); });
+mate.RegisterMateArg('time', () => { return Date.now(); });
+mate.RegisterMateArg('eval', (script) => { return eval(script); });
 let commands = require('./mate-commands').commands;
 commands.Attach(mate);
 mate.Load();

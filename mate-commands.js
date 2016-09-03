@@ -107,6 +107,7 @@ commands.Register('assert', (data, step, callback) => {
 		switch(operator) {
 
 			case 'equal':
+			case 'equals':
 				if(data == expected) { res.assert = true; }
 			break;
 
@@ -722,6 +723,8 @@ commands.Register('repeat', (data, step, callback) => {
 commands.Register('runCampaign', (data, step, callback) => {
 
 	if (!data[step].data) { callback({ success: false, message: 'Need to provide data for this command' }); return false; }
+
+	let thisStep = data[step];
 
 	let campaign = typeof(data[step].data) === 'string' ? data[step].data : data[step].data.campaign || null;
 	let withArgs = data[step].data.withArgs || {};
