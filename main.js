@@ -46,17 +46,22 @@ class Mate2 {
 			this.args[k] = v;
 		}
 
+		if (!this.args['generation']) {
+			this.args['generation'] = 0;
+		}
+
 	}
 
 	SetCampaign(campaign) {
 
 		this.campaign.id = campaign;
+		this.fileName = campaign + (!/\.json$/.test(campaign) ? '.json' : '');
 
 	}
 
-	Load(fileName = `${this.campaign.id}.json`) {
+	Load() {
 
-		let content = fs.readFileSync(fileName, {'encoding': 'utf-8'});
+		let content = fs.readFileSync(this.fileName, {'encoding': 'utf-8'});
 
 		if(content.length == 0) {
 			this.WaitForCommands();
