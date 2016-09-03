@@ -746,7 +746,7 @@ commands.Register('runCampaign', (data, step, callback) => {
 
 		if (!resultData[n]) { callback({ success: true, iterations: n }); return true; }
 
-		let args = ['main.js', campaign, `--${usingData.asArgument}=${resultData[n]}`, ...withArgsArr]
+		let args = ['main.js', campaign, `--${usingData.asArgument}=${resultData[n]}`, `--iteration=${n}`, ...withArgsArr]
 		console.log('Spawning node process with the following arguments: ', args);
 		let mateChild = spawn('node', args);
 
