@@ -131,53 +131,6 @@ There are some dynamic variables you can use:
 
 ### Commands
 
-#### assert
-**data**: {`fromStep int`, `usingExpression array`, `operator string`, `expected mixed`}
-
-Assert that the requested data matches the `expected` value compared by the `operator`.
-
-`operator` can be one of the following: `equal` compares if they are the same, `gt` compares if the actual is greater than the expected, `gte` compares if the actual is greater than or equal to the expected, `lt` compares if the actual is less than the expected, `lte` compares if the actual is less than or equal to the expected, `null` compares if the actual is null, `notnull` compares if the actual is not null, `contains` compares if the actual contains the expected value, `notcontains` compares if the actual does not contain the expected value, `inrange` checks if the data is within the range specified (use a string like "1-2" or "3-7")
-
-Example 1:
-
-    {
-        "command": "assert",
-        "data": {
-            "fromStep": 1,
-            "fromIndex": 0,
-            "operator": "equal",
-            "expected": "anjunabeats"
-        }
-    }
-
-Will assert that the data from step 1 at index 0 (first entry in the array) is equal to `anjunabeats`. 
-
-Example 2:
-
-    {
-        "command": "assert",
-        "data": {
-            "fromStep": 1,
-            "operator": "contains",
-            "expected": "mywebsitename.com"
-        }
-    },
-    {
-        "command": "assert",
-        "data": {
-            "fromStep": 2,
-            "fromIndex": ["reason", "index"],
-            "operator": "inrange",
-            "expected": "0-2"
-        }
-    }
-
-Might be used in Google search results to assert that data gathered from a previous step contains your website address. The second assertion verifies that the result is in the top three. Asserting assertions is OK!
-
-Returns: { 'assert': bool, 'reason': { 'message': string, 'expected': string, 'actual': string, 'index': mixed } }
-
----
-
 #### click
 **data**: `CSS Selector string`
 

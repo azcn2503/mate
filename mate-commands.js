@@ -62,11 +62,33 @@ class Commands {
 
 	}
 
+	/**
+	 * Get data from a previous step, or from a file
+	 * @param {Array}  data - The array of steps currently being evaluated
+	 * @param {Number} step - The step number we are currently on
+	 */
+	GetData(data = [], step = 1) {
+
+		let currentStep = data[step] || {};
+		let currentStepData = currentStep.data || {};
+		let fromStep = currentStepData.fromStep || step - 1;
+		let fromFile = currentStepData.fromFile || null;
+		let usingExpression = currentStepData.usingExpression || null;
+		let res = [];
+
+		res = fromFile ? this.LoadFromFile(fromFile) : data[fromStep].result.data;
+		if (usingExpression) { res = jexpr(res, usingExpression); }
+
+		return res;
+
+	}
+
 }
 
 let commands = new Commands();
 
 commands.Register('acceptAlert', (data, step, callback) => {
+
 	commands.driver.switchTo().alert().then( function success(alert) {
 		alert.getText().then( function success(text) {
 			alert.accept();
@@ -77,126 +99,60 @@ commands.Register('acceptAlert', (data, step, callback) => {
 	}).then(null, (err) => {
 		callback({success: false, message: err});
 	});
+
 });
 
 commands.Register('assert', (data, step, callback) => {
-	let fromStep     = data[step].data.fromStep || step - 1;
-	let usingExpression = data[step].data.usingExpression || null;
-	let recurse      = false;
+
+	let resultData = commands.GetData(data, step);
+
 	let operator     = data[step].data.operator || 'equal';
 	let expected     = data[step].data.expected || null;
-	let resultData = data[fromStep].result.data || null;
 
-	if(usingExpression) {
-		resultData = jexpr(resultData, usingExpression);
-	}
-
-	this.assertItem = function(data, operator, expected) {
-
-		let res = {
-			assert: false,
-			reason: {
-				message  : '',
-				expected : '',
-				actual   : '',
-				index    : null
-			},
-			success: true
-		};
-
-		switch(operator) {
-
-			case 'equal':
-			case 'equals':
-				if(data == expected) { res.assert = true; }
-			break;
-
-			case 'gt':
-				if(data > expected) { res.assert = true; }
-			break;
-
-			case 'gte':
-				if(data >= expected) { res.assert = true; }
-			break;
-
-			case 'lt':
-				if(data < expected) { res.assert = true; }
-			break;
-
-			case 'lte':
-				if(data <= expected) { res.assert = true; }
-			break;
-
-			case 'null':
-				if(data === null) { res.assert = true; }
-			break;
-
-			case 'notnull':
-				if(data !== null) { res.assert = true; }
-			break;
-
-			case 'contains':
-				if(data.indexOf(expected) != -1) { res.assert = true; }
-			break;
-
-			case 'notcontains':
-				if(data.indexOf(expected) == -1) { res.assert = true; }
-			break;
-
-			case 'inrange':
-				let range = expected.split('-');
-				let lower = parseInt(range[0]);
-				let upper = parseInt(range[1]);
-				if(data >= lower && data <= upper) { res.assert = true; }
-			break;
-
+	let operators = {
+		'equal': (data, expected) => {
+			return data == expected;
+		},
+		'gt': (data, expected) => {
+			return data > expected;
+		},
+		'gte': (data, expected) => {
+			return data >= expected;
+		},
+		'lt': (data, expected) => {
+			return data < expected;
+		},
+		'lte': (data, expected) => {
+			return data <= expected;
+		},
+		'null': (data) => {
+			return data === null;
+		},
+		'notnull': (data, expected) => {
+			return data !== null;
+		},
+		'contains': (data, expected) => {
+			return data.indexOf(expected) != -1;
+		},
+		'notcontains': (data, expected) => {
+			return data.indexOf(expected) == -1;
+		},
+		'inrange': (data, expected) => {
+			let range = expected.split('-');
+			let lower = parseInt(range[0]);
+			let upper = parseInt(range[1]);
+			return (data >= lower && data <= upper);
 		}
-
-		res.reason.expected = aliases[operator] + ' ' + expected;
-		res.reason.actual   = data;
-		res.reason.message  = res.assert ? 'pass' : 'fail';
-
-		return res;
-
 	};
 
-	let aliases = {
-		'equal'       : '=',
-		'gt'          : '>',
-		'gte'         : '>=',
-		'lt'          : '<',
-		'lte'         : '<=',
-		'null'        : 'null',
-		'notnull'     : 'not null',
-		'contains'    : 'contains',
-		'notcontains' : 'does not contain',
-		'inrange'     : 'is between'
-	};
-
-	let tmpData = null;
-
-	if(typeof(resultData) === 'object' || typeof(resultData) === 'array') {
-
-		for(let i in resultData) {
-
-			res = this.assertItem(resultData[i], operator, expected);
-
-			if(res.assert) { break; }
-
-		}
-
-	}
-
-	else {
-
-		res = this.assertItem(resultData, operator, expected);
-
-	}
+	let res = operators(operator, expected);
 
 	callback({data: res});
+
 });
 
 commands.Register('click', (data, step, callback) => {
+
 	let selector = data[step].data;
 
 	commands.driver.findElement(commands.webdriver.By.css(selector)).then( (el) => {
@@ -205,13 +161,12 @@ commands.Register('click', (data, step, callback) => {
 	}).then( null, (err) => {
 		callback({success: false, message: err});
 	});
+
 });
 
 commands.Register('commands', (data, step, callback) => {
 
 	let innerCommands = data[step].data;
-
-	console.log('innerCommands', innerCommands);
 
 	let runInnerCommand = (innerStep = 0) => {
 
@@ -223,7 +178,6 @@ commands.Register('commands', (data, step, callback) => {
 		}
 
 		let innerCommand = innerCommands[innerStep];
-		console.log('innerCommand', innerCommand);
 
 		commands.Run(innerCommands[innerStep].command, innerCommands, innerStep, (innerRes) => {
 
@@ -238,6 +192,7 @@ commands.Register('commands', (data, step, callback) => {
 });
 
 commands.Register('done', (data, step, callback) => {
+
 	// _id is the campaign ID passed from processCommand
 
 	let fileName = data[step].data || data[step]._id || '';
@@ -261,18 +216,14 @@ commands.Register('done', (data, step, callback) => {
 	else {
 		callback({ success: true });
 	}
+
 });
 
 commands.Register('email', (data, step, callback) => {
-	let fromStep = data[step].data.fromStep;
-	let usingExpression = data[step].data.usingExpression || null;
-	let resultData = data[fromStep].result.data;
+
+	let resultData = commands.GetData(data, step);
 	let pad = data[step].data.pad || '    ';
 	let nl2br = data[step].data.nl2br || true;
-
-	if(usingExpression) {
-		resultData = jexpr(resultData, usingExpression);
-	}
 
 	let dataStr = pad ? JSON.stringify(resultData, null, pad) : JSON.stringify(resultData);
 	dataStr = nl2br ? dataStr.replace(/[\n\r]/g, '<br />') : dataStr;
@@ -293,6 +244,7 @@ commands.Register('email', (data, step, callback) => {
 			callback({success: true});
 		}
 	});
+
 });
 
 commands.Register('eval', (data, step, callback) => {
@@ -448,17 +400,13 @@ commands.Register('getAttributeValues', function (data, step, callback) {
 
 	};
 
-	let fromFile = data[step].data.fromFile || null;
-	let fromStep                = data[step].data.fromStep || step - 1; // required
+	let resultData = commands.GetData(data, step);
+
 	let attributeName           = typeof(data[step].data === 'string') ? data[step].data : data[step].data.attributeName; // required
 	let matchingExpression      = data[step].data.matchingExpression || null;
 	let matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 	let kvp                     = data[step].data.kvp || null;
 	let group                   = data[step].data.group || false;
-	let usingExpression = data[step].data.usingExpression || null;
-	let resultData            = fromFile ? commands.LoadFromFile(fromFile) : data[fromStep].result.data;
-
-	if (usingExpression) { resultData = jexpr(resultData, usingExpression); }
 
 	// key value pair settings
 	if(kvp) {
@@ -639,16 +587,11 @@ commands.Register('getWindowHandles', (data, step, callback) => {
 
 commands.Register('matchEach', (data, step, callback) => {
 
-	let fromStep                = data[step].data.fromStep; // required
-	let usingExpression         = data[step].data.usingExpression || null;
+	let resultData = commands.GetData(data, step);
+
 	let matchingExpression      = data[step].data.matchingExpression; // required
 	let matchingExpressionFlags = data[step].data.matchingExpressionFlags || '';
 	let mode                    = data[step].data.mode || 'match';
-	let resultData            = data[fromStep].result.data;
-
-	if(usingExpression) {
-		resultData = jexpr(resultData, usingExpression);
-	}
 
 	let res = [];
 
@@ -673,6 +616,7 @@ commands.Register('matchEach', (data, step, callback) => {
 });
 
 commands.Register('open', (data, step, callback) => {
+
 	let url = data[step].data;
 	if (!commands.driver) {
 		commands.mate.BuildDriver('chrome');
@@ -683,6 +627,7 @@ commands.Register('open', (data, step, callback) => {
 	}).then(null, (err) => {
 		callback({success: false, message: err});
 	});
+
 });
 
 commands.Register('repeat', (data, step, callback) => {
@@ -724,7 +669,7 @@ commands.Register('runCampaign', (data, step, callback) => {
 
 	if (!data[step].data) { callback({ success: false, message: 'Need to provide data for this command' }); return false; }
 
-	let thisStep = data[step];
+	let resultData = commands.GetData(data, step);
 
 	let campaign = typeof(data[step].data) === 'string' ? data[step].data : data[step].data.campaign || null;
 	let withArgs = data[step].data.withArgs || {};
@@ -732,7 +677,6 @@ commands.Register('runCampaign', (data, step, callback) => {
 	usingData.fromFile = usingData.fromFile || null;
 	usingData.fromStep = usingData.fromStep || step - 1;
 	usingData.asArgument = usingData.asArgument || 'initial';
-	let resultData = usingData.fromFile ? commands.LoadFromFile(usingData.fromFile) : data[usingData.fromStep].result.data || [];
 
 	let withArgsArr = [];
 	for (let i in Object.keys(withArgs)) {
@@ -787,15 +731,10 @@ commands.Register('runScript', (data, step, callback) => {
 
 commands.Register('save', (data, step, callback) => {
 
-	let fromStep     = data[step].data.fromStep || step - 1;
-	let usingExpression = data[step].data.usingExpression || null;
+	let resultData = commands.GetData(data, step);
+
 	let fileName     = typeof(data[step].data) === 'string' ? data[step].data : data[step].data.fileName || new Date().getTime() + Math.random().toString().replace(/\./, '0');
 	let fileType     = data[step].data.fileType || 'json';
-	let resultData = data[fromStep].result.data;
-
-	if(usingExpression) {
-		resultData = jexpr(resultData, usingExpression);
-	}
 
 	fileName = fileName.replace(/[\/\\\<\>\|\":?*]/g, '-');
 
