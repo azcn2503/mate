@@ -73,11 +73,17 @@ class Commands {
 		let currentStepData = currentStep.data || {};
 		let fromStep = currentStepData.fromStep || step - 1;
 		let fromFile = currentStepData.fromFile || null;
+		let fromIndex = currentStepData.hasOwnProperty('fromIndex') ? currentStepData.fromIndex : null;
 		let usingExpression = currentStepData.usingExpression || null;
 		let res = [];
 
 		res = fromFile ? this.LoadFromFile(fromFile) : data[fromStep].result.data;
-		if (usingExpression) { res = jexpr(res, usingExpression); }
+		if (usingExpression) {
+			res = jexpr(res, usingExpression);
+			if (fromIndex !== null) {
+				res = res[fromIndex];
+			}
+		}
 
 		return res;
 
@@ -128,7 +134,7 @@ commands.Register('assert', (data, step, callback) => {
 		'null': (data) => {
 			return data === null;
 		},
-		'notnull': (data, expected) => {
+		'notnull': (data) => {
 			return data !== null;
 		},
 		'contains': (data, expected) => {
@@ -145,9 +151,9 @@ commands.Register('assert', (data, step, callback) => {
 		}
 	};
 
-	let res = operators(operator, expected);
+	let res = operators[operator](resultData, expected);
 
-	callback({data: res});
+	callback({success: true, data: res});
 
 });
 
