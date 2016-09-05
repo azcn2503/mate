@@ -141,7 +141,7 @@ class Mate2 {
 			return false;
 		}
 
-		console.log(`Processing command: ${command.command}`);
+		console.log(`Processing command: "${command.command}" with data: ${JSON.stringify(this.data[this.step])}`);
 
 		// Execute the command
 		commands.Run(command.command, this.data, this.step, (res) => {

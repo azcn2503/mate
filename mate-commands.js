@@ -119,6 +119,9 @@ commands.Register('assert', (data, step, callback) => {
 		'equal': (data, expected) => {
 			return data == expected;
 		},
+		'notequal': (data, expected) => {
+			return data != expected;
+		},
 		'gt': (data, expected) => {
 			return data > expected;
 		},
