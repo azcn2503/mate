@@ -1,0 +1,11 @@
+[
+	{
+		"command": "open",
+		"data": "http://www.google.com"
+	},
+	{
+		"description": "Perform a search for mate",
+		"command": "search",
+		"data": "mate"
+	}
+]

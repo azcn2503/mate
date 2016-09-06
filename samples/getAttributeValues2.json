@@ -1,0 +1,22 @@
+[
+	{
+		"command": "open",
+		"data": "http://www.google.com"
+	},
+	{
+		"command": "search",
+		"data": "mate"
+	},
+	{
+		"command": "selectAll",
+		"data": "h3.r > a"
+	},
+	{
+		"description": "Get all href values from the previous command",
+		"command": "getAttributeValues",
+		"data": {
+			"fromStep": 2,
+			"attributeName": "href"
+		}
+	}
+]

@@ -1,0 +1,24 @@
+[
+	{
+		"command": "open",
+		"data": "http://www.google.com"
+	},
+	{
+		"command": "search",
+		"data": "mate"
+	},
+	{
+		"command": "selectAll",
+		"data": "h3.r > a"
+	},
+	{
+		"description": "Get all href values from the previous command",
+		"command": "getAttributeValues",
+		"data": "href"
+	},
+	{
+		"description": "Run the samples/runCampaign2.json file using data from the previous step as the {{args.initial}} variable (defaults)",
+		"command": "runCampaign",
+		"data": "samples/runCampaign2"
+	}
+]

@@ -1,0 +1,7 @@
+[
+	{
+		"description": "Start a browser and go to http://www.google.com",
+		"command": "open",
+		"data": "http://www.google.com"
+	}
+]

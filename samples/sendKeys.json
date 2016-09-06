@@ -1,0 +1,14 @@
+[
+	{
+		"command": "open",
+		"data": "http://www.google.com"
+	},
+	{
+		"description": "Type mate in to the search box",
+		"command": "sendKeys",
+		"data": {
+			"selector": "input[name=q]",
+			"string": "mate"
+		}
+	}
+]

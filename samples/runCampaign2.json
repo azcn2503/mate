@@ -1,0 +1,10 @@
+[
+	{
+		"description": "Open the URL passed over from the runCampaign file. It should represent the href attribute value of the Google search result heading links.",
+		"command": "open",
+		"data": "{{args.initial}}"
+	},
+	{
+		"command": "done"
+	}
+]

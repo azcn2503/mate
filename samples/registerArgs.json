@@ -1,0 +1,38 @@
+[
+	{
+		"command": "open",
+		"data": "http://www.google.com"
+	},
+	{
+		"command": "search",
+		"data": "mate"
+	},
+	{
+		"command": "selectAll",
+		"data": "h3.r"
+	},
+	{
+		"command": "getAttributeValues",
+		"data": "textContent"
+	},
+	{
+		"description": "Register an argument called {{args.test}} that will use the first index of result data from step 3 (getAttributeValues)",
+		"command": "registerArgs",
+		"data":[
+			{
+				"name": "test",
+				"fromStep": 3,
+				"usingExpression": ["0"],
+				"fromIndex": 0
+			}
+		]
+	},
+	{
+		"description": "Search for the value represented by the {{args.test}} argument we just registered",
+		"command": "search",
+		"data": "{{args.test}}"
+	},
+	{
+		"command": "done"
+	}
+]

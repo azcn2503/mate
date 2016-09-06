@@ -1,0 +1,15 @@
+[
+	{
+		"command": "open",
+		"data": "http://www.google.com"
+	},
+	{
+		"command": "search",
+		"data": "mate"
+	},
+	{
+		"description": "Select all hyperlinks in the result headings",
+		"command": "selectAll",
+		"data": "h3.r > a"
+	}
+]

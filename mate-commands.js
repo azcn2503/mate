@@ -67,10 +67,10 @@ class Commands {
 	 * @param {Array}  data - The array of steps currently being evaluated
 	 * @param {Number} step - The step number we are currently on
 	 */
-	GetData(data = [], step = 1) {
+	GetData(data = [], step = 1, context = null) {
 
 		let currentStep = data[step] || {};
-		let currentStepData = currentStep.data || {};
+		let currentStepData = context || currentStep.data || {};
 		let fromStep = currentStepData.fromStep || step - 1;
 		let fromFile = currentStepData.fromFile || null;
 		let fromIndex = currentStepData.hasOwnProperty('fromIndex') ? currentStepData.fromIndex : null;
@@ -636,6 +636,28 @@ commands.Register('open', (data, step, callback) => {
 	}).then(null, (err) => {
 		callback({success: false, message: err});
 	});
+
+});
+
+commands.Register('registerArgs', (data, step, callback) => {
+
+	let args = data[step].data || [];
+
+	let registeredCount = 0;
+
+	for (let i in args) {
+
+		let argName = args[i].name || null;
+		let fromStep = args[i].fromStep || null;
+		if (!argName || !fromStep) { continue; }
+		let argValue = commands.GetData(data, fromStep, args[i]);
+
+		commands.mate.args[argName] = argValue;
+		registeredCount++;
+
+	}
+
+	callback({ success: true, registeredCount });
 
 });
 
